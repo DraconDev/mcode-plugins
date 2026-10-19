@@ -56,9 +56,13 @@ fi
 
 mkdir -p "$TARGET_DIR"
 # Copy the plugin payload, excluding developer-only scripts and local state.
-for item in .minimax-plugin .claude-plugin .codex-plugin mcp server skills hooks agents bindings icon.webp package.json README.md; do
-  [ -e "$SOURCE_DIR/$item" ] && cp -R "$SOURCE_DIR/$item" "$TARGET_DIR/"
-done
+# The list lives in one file so the installer and the packager ship the same set.
+while IFS= read -r item; do
+  if [ -z "$item" ]; then continue; fi
+  if [ -e "$SOURCE_DIR/$item" ]; then
+    cp -R "$SOURCE_DIR/$item" "$TARGET_DIR/"
+  fi
+done < "$REPO_ROOT/scripts/plugin-payload.txt"
 
 # Shared modules live once in the repository and are copied into each plugin
 # that has an MCP server, so the installed plugin is self-contained and there

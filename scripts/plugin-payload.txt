@@ -1,0 +1,20 @@
+# The files that make up a plugin's payload.
+#
+# One item per line. The installer copies the ones that exist; the packager
+# packs the same set. Keeping the list here means "what gets installed" and
+# "what gets shipped" cannot drift apart.
+#
+# Items that are optional are simply absent from a given plugin — hooks only
+# exist for a hook plugin, server/ only for a plugin with an MCP server.
+.minimax-plugin
+.claude-plugin
+.codex-plugin
+mcp
+server
+skills
+hooks
+agents
+bindings
+icon.webp
+package.json
+README.md
