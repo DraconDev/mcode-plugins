@@ -256,9 +256,9 @@ if (!found) {
   process.exit(1);
 }
 
-// The classifier lives in the same chunk as the policy.
-const guardMatch = found.source.match(QUOTA_GUARD);
-const guardPatched = guardMatch !== null && guardMatch[0].includes('Ir.USAGE_LIMIT_EXCEEDED');
+// The classifier lives in the same chunk as the policy. After patching, the
+// original guard is gone, so the patched form is what identifies the state.
+const guardPatched = found.source.includes(QUOTA_REPLACEMENT);
 
 const current = found.match.values;
 const isPatched = samePolicy(current, PATCHED_POLICY);
@@ -292,7 +292,7 @@ if (revert) {
     console.log(`reverted retry budget to: ${formatPolicy(DEFAULT_POLICY)}`);
   }
   if (guardPatched) {
-    source = source.replace(QUOTA_GUARD, QUOTA_GUARD_SOURCE);
+    source = source.replace(QUOTA_REPLACEMENT, QUOTA_GUARD_SOURCE);
     console.log('reverted: a spent quota and exhausted credits are terminal again');
   }
   if (source !== found.source) {
