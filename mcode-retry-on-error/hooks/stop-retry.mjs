@@ -60,7 +60,7 @@ import {
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-import { isRetryableFailure, retryInstruction, textOf } from './transient.mjs';
+import { isRetryableFailure, textOf } from './transient.mjs';
 
 const HOOK_TIMEOUT_BUDGET_MS = 7_500;
 const TAIL_BYTES = 256 * 1024;
