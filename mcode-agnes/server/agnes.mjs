@@ -66,11 +66,10 @@ function apiRoot(baseUrl) {
  *
  * @returns {Promise<{ dataUrl: string, mimeType: string, remoteUrl: string | null }>}
  */
-export async function requestImage({ baseUrl, apiKey, model, prompt, size, ratio, images, responseFormat, retry }) {
+export async function requestImage({ baseUrl, apiKey, model, prompt, size, ratio, images, retry }) {
   checkImageModel(model);
 
   const body = { model, prompt };
-  if (responseFormat) body.response_format = responseFormat;
   if (images && images.length > 0) body.image = images;
   if (size) body.size = size;
   if (ratio) body.ratio = ratio;
@@ -163,6 +162,9 @@ export async function requestVideo({ baseUrl, apiKey, model, prompt, images, num
   if (model === 'agnes-video-2.5-flash') {
     if (refs.length === 0) body.mode = 't2v';
     if (refs.length === 1) body.mode = 'keyframe';
+    // The model wants the mode at the top level for every reference count,
+    // not only for the single-image case.
+    if (refs.length > 1) body.mode = 'keyframes';
   }
   if (refs.length === 1) body.image = refs[0];
   if (refs.length > 1) body.extra_body = { image: refs, mode: 'keyframes' };

@@ -131,6 +131,9 @@ web/games/wip/football-forever/docs/audit/
 # Local runtime state
 node_modules/
 
+# Packed plugin archives (scripts/package-plugin.sh)
+dist/
+
 # Generated media from ad-hoc generation tasks. Not plugin content.
 videos/
 deliverables/

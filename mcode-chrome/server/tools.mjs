@@ -544,9 +544,12 @@ const TOOL_DEFS = [
     },
     run: async (args, ctx) => {
       const timeoutMs = args.timeoutMs ?? 10_000;
+      // The session group title is required so the extension creates the
+      // automation tab inside the session's group instead of a stray window,
+      // but an explicitly targeted tab must not be moved into it.
       const result = await ctx.send('page.waitFor', args, {
         timeoutMs: timeoutMs + 2_000,
-        group: false,
+        join: false,
       });
       return text(`Observed ${args.kind}: ${args.value}\n${safeJson(result)}`);
     },

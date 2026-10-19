@@ -284,12 +284,14 @@ const TOOL_DEFS = [
           type: 'string',
           description:
             'Where to download the video. A relative path resolves against the agent ' +
-            'workspace, but an absolute path (e.g. /home/you/project/clip.mp4) is ' +
-            'unambiguous and preferred.',
+            'workspace and has to stay inside it, but an absolute path ' +
+            '(e.g. /home/you/project/clip.mp4) is unambiguous and preferred.',
         },
         baseDir: {
           type: 'string',
-          description: 'Directory a relative savePath resolves against. Defaults to the agent workspace.',
+          description:
+            'Directory a relative path resolves against, inside the agent workspace. ' +
+            'Defaults to the agent workspace; it may not point outside it.',
         },
         maxRetries: { type: 'number', description: 'Override the retry count (default 15).' },
       },
