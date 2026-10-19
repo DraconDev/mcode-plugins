@@ -18,8 +18,13 @@ The MCP server is named `agnes`, so the tools are `mcp__agnes__*`:
 
 ## Credential
 
-Read from pi's auth store (`~/.pi/agent/auth.json`, key `agnes`), so pi and mcode share one
-login. `AGNES_API_KEY` and `AGNES_CN_API_KEY` override it.
+Set `AGNES_API_KEY` (or `AGNES_CN_API_KEY` for the other region) in the environment. That is all
+this plugin needs — no other tool has to be installed.
+
+If you already sign in to Agnes through [pi](https://github.com/tianrendong/pi), the key is picked
+up automatically from pi's auth store (`~/.pi/agent/auth.json`, key `agnes`), so one login serves
+both agents. That is a convenience, not a dependency: without pi, the environment variable alone
+is enough. The environment variable wins when both are present.
 
 ## Retry
 

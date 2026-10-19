@@ -22,10 +22,19 @@ The MCP server is named `codex`, so the tools are `mcp__codex__*`:
 
 ## Credential
 
-The OAuth credential lives in pi's auth store (`~/.pi/agent/auth.json`, key `openai-codex`), so the
-same ChatGPT subscription works in pi and in mcode without a second sign-in. An expired token is
-refreshed **in memory only** — this plugin does not write back to pi's auth file, so it cannot
-corrupt another tool's state. `CODEX_IMAGE_ACCESS_TOKEN` and `CODEX_IMAGE_ACCOUNT_ID` override it.
+Set `CODEX_IMAGE_ACCESS_TOKEN` in the environment — the ChatGPT subscription's image OAuth access
+token. Add `CODEX_IMAGE_ACCOUNT_ID` if you want to name the account explicitly; otherwise it is
+read from the token itself. That is all this plugin needs — no other tool has to be installed.
+
+If you already sign in to the Codex image provider through
+[pi](https://github.com/tianrendong/pi), the credential is picked up automatically from pi's auth
+store (`~/.pi/agent/auth.json`, key `openai-codex`), so one login serves both agents. That is a
+convenience, not a dependency: without pi, the environment variable alone is enough. The
+environment variable wins when both are present.
+
+A token from pi's store is refreshed when it expires, **in memory only** — this plugin does not
+write back to pi's auth file, so it cannot corrupt another tool's state. A token you supply
+yourself is never refreshed: supply a fresh one when it expires.
 
 ## Retry
 
