@@ -91,6 +91,14 @@ The bridge trusts any local process, so the gate lives here:
 6. `console_messages` and `network_requests` for "the page is broken" requests — read them before
    speculating about the DOM.
 
+## File paths
+
+`screenshot` (`path`) and `upload_file` (`paths`) take local filesystem paths. Use **absolute**
+paths, for example `/home/you/project/shots/page.png`. The plugin server is spawned with the
+home directory as its working directory, not the agent's workspace, so a relative path resolves
+against the wrong place. Both tools also accept `baseDir` to anchor a relative path, but absolute
+paths are simpler and unambiguous.
+
 ## Secrets and sensitive pages
 
 A signed-in browser is full of credentials.
