@@ -77,6 +77,11 @@ const TRANSIENT_PATTERNS = [
 
 const log = (...args) => process.stderr.write(`[mcode-retry-on-error] ${args.join(' ')}\n`);
 
+const DEBUG = process.env.MCODE_RETRY_DEBUG === '1';
+const trace = (...args) => {
+  if (DEBUG) log('debug:', ...args);
+};
+
 function readEnvInt(name, fallback) {
   const raw = process.env[name]?.trim();
   if (!raw) return fallback;
@@ -244,12 +249,20 @@ async function main() {
   const payload = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
 
   const sessionId = payload.session_id ?? payload.sessionId;
-  if (!sessionId) return;
+  if (!sessionId) {
+    trace('no session id in payload');
+    return;
+  }
 
   const sessionDir = findSessionDir(sessionId);
-  if (!sessionDir) return;
+  if (!sessionDir) {
+    trace('session dir not found for', sessionId);
+    return;
+  }
+  trace('session dir:', sessionDir);
 
   const records = readTailRecords(join(sessionDir, 'messages.jsonl'));
+  trace('records read:', records.length);
   if (records.length === 0) return;
 
   const messages = records.map((record) => record?.message ?? record).filter(Boolean);
