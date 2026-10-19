@@ -30,11 +30,17 @@ const check = (label, ok, detail = '') => {
 /**
  * Feed lines to a server and collect what it writes back.
  *
+ * The run ends as soon as the expected response arrives, or when the timeout
+ * expires — whichever comes first. A server that has already answered is
+ * killed, because it is a long-running process that would otherwise hold the
+ * test open for the full timeout.
+ *
  * @param {string} script - path to the server entry point, relative to the repo
  * @param {string[]} lines - lines to write to stdin
- * @param {number} [timeoutMs] - how long to wait for the process to settle
+ * @param {number} [expectId] - the response id to wait for
+ * @param {number} [timeoutMs] - how long to wait before giving up
  */
-function drive(script, lines, timeoutMs = 8000) {
+function drive(script, lines, expectId = 1, timeoutMs = 8000) {
   return new Promise((resolvePromise) => {
     const child = spawn(process.execPath, [join(REPO_ROOT, script)], {
       cwd: REPO_ROOT,
@@ -45,9 +51,20 @@ function drive(script, lines, timeoutMs = 8000) {
     let stderr = '';
     let exitCode = null;
     let exited = false;
+    let finished = false;
+
+    const finish = (wasKilled) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      if (!exited) child.kill('SIGKILL');
+      resolvePromise({ stdout, stderr, exitCode, exited, wasKilled });
+    };
 
     child.stdout.on('data', (chunk) => {
       stdout += chunk.toString();
+      // The answer is in — no need to wait for the process to end.
+      if (stdout.includes(`"id":${expectId}`)) setTimeout(() => finish(true), 50);
     });
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString();
@@ -55,15 +72,13 @@ function drive(script, lines, timeoutMs = 8000) {
     child.on('exit', (code) => {
       exited = true;
       exitCode = code;
+      finish(false);
     });
+
+    const timer = setTimeout(() => finish(false), timeoutMs);
 
     for (const line of lines) child.stdin.write(`${line}\n`);
     child.stdin.end();
-
-    setTimeout(() => {
-      if (!exited) child.kill('SIGKILL');
-      resolvePromise({ stdout, stderr, exitCode, exited: true, wasKilled: !exited });
-    }, timeoutMs);
   });
 }
 
