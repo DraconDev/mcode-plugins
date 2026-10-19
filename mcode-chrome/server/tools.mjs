@@ -67,17 +67,14 @@ const TARGET_SCHEMA = {
 /**
  * Base directory for relative filesystem paths.
  *
- * The plugin server is spawned with the home directory as its working
- * directory, not the agent's workspace, so a relative path would land in the
- * wrong place. Callers should pass absolute paths, and `baseDir` is the
- * escape hatch for the rare case where a relative path is unavoidable.
+ * Defaults to the agent workspace. Absolute paths bypass it entirely.
  */
 const BASE_DIR_PROP = {
   baseDir: {
     type: 'string',
     description:
-      'Directory relative paths resolve against. Defaults to the server working ' +
-      'directory (the home directory) — prefer absolute paths.',
+      'Directory relative paths resolve against. Defaults to the agent workspace ' +
+      '(the directory mcode was launched from).',
   },
 };
 
@@ -607,9 +604,8 @@ const TOOL_DEFS = [
         path: {
           type: 'string',
           description:
-            'Optional path to also write the image to. Use an ABSOLUTE path: the plugin ' +
-            'server runs with the home directory as its working directory, not your ' +
-            'workspace, so a relative path would land in the wrong place.',
+            'Optional path to also write the image to. A relative path resolves against the ' +
+            'agent workspace; an absolute path is unambiguous and preferred.',
         },
         format: { type: 'string', enum: ['png', 'jpeg'], description: 'Image format.', default: 'png' },
         quality: { type: 'number', description: 'JPEG quality, 0-100.' },
@@ -785,9 +781,8 @@ const TOOL_DEFS = [
           type: 'array',
           items: { type: 'string' },
           description:
-            'Local file paths to upload. Use ABSOLUTE paths: the plugin server runs with ' +
-            'the home directory as its working directory, not your workspace, so a ' +
-            'relative path would resolve against the wrong place.',
+            'Local file paths to upload. Relative paths resolve against the agent workspace; ' +
+            'absolute paths are unambiguous and preferred.',
         },
         ...TARGET_PROPS,
         ...BACKGROUND_PROP,
