@@ -47,6 +47,7 @@
  */
 
 import {
+  appendFileSync,
   closeSync,
   mkdirSync,
   openSync,
@@ -292,27 +293,39 @@ async function main() {
   for await (const chunk of process.stdin) chunks.push(chunk);
   const payload = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
 
-  // Heartbeat: proves the hook process ran, whatever the decision is.
-  try {
-    mkdirSync(DATA_DIR, { recursive: true });
-    writeFileSync(
-      join(DATA_DIR, 'heartbeat.log'),
-      `${new Date().toISOString()} event=${payload.hook_event_name} keys=${JSON.stringify(Object.keys(payload))}\n`,
-      'utf8',
-    );
-  } catch {
-    // Never let diagnostics break the hook.
+  // Heartbeat: proves the hook process ran, whatever the decision is. Opt-in,
+  // because the hook fires on every turn end.
+  if (CONFIG.debug === true || DEBUG) {
+    try {
+      mkdirSync(DATA_DIR, { recursive: true });
+      appendFileSync(
+        join(DATA_DIR, 'heartbeat.log'),
+        `${new Date().toISOString()} event=${payload.hook_event_name} ` +
+          `keys=${JSON.stringify(Object.keys(payload))}\n`,
+        'utf8',
+      );
+    } catch {
+      // Never let diagnostics break the hook.
+    }
   }
 
   // Diagnostic escape hatch: force a block on every Stop, to verify that the
   // hook is wired up end to end. Checked before anything else so it cannot be
-  // short-circuited by an unexpected transcript shape.
+  // short-circuited by an unexpected transcript shape. Bounded, because an
+  // unbounded block would loop the turn forever.
   if (FORCE_BLOCK) {
+    const { file, state } = loadState(payload.session_id ?? 'diagnostic');
+    const attempts = (state.attempts ?? 0) + 1;
+    saveState(file, { attempts, firstAttemptAt: state.firstAttemptAt || Date.now() });
+    if (attempts > 3) {
+      clearState(file);
+      return;
+    }
     process.stdout.write(
       `${JSON.stringify({
         decision: 'block',
         reason:
-          'The retry hook fired successfully (forceBlock diagnostic is on). ' +
+          `The retry hook fired successfully (forceBlock diagnostic, attempt ${attempts} of 3). ` +
           'Turn it off by setting "forceBlock": false in the plugin config.',
       })}\n`,
     );
