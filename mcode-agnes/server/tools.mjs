@@ -124,13 +124,13 @@ export function createTools({ workspaceCwd }) {
           savePath: {
             type: 'string',
             description:
-              'Where to write the image. Use an ABSOLUTE path: the plugin server runs with the ' +
-              'home directory as its working directory, not your workspace, so a relative path ' +
-              'would land in the wrong place.',
+              'Where to write the image. A relative path resolves against the agent ' +
+              'workspace, but an absolute path (e.g. /home/you/project/hero.png) is ' +
+              'unambiguous and preferred.',
           },
           baseDir: {
             type: 'string',
-            description: 'Directory a relative savePath resolves against. Defaults to the server working directory.',
+            description: 'Directory a relative savePath resolves against. Defaults to the agent workspace.',
           },
           maxRetries: { type: 'number', description: 'Override the retry count (default 15).' },
         },
@@ -203,12 +203,13 @@ export function createTools({ workspaceCwd }) {
           savePath: {
             type: 'string',
             description:
-              'Where to download the video. Use an ABSOLUTE path: the plugin server runs with ' +
-              'the home directory as its working directory, not your workspace.',
+              'Where to download the video. A relative path resolves against the agent ' +
+              'workspace, but an absolute path (e.g. /home/you/project/clip.mp4) is ' +
+              'unambiguous and preferred.',
           },
           baseDir: {
             type: 'string',
-            description: 'Directory a relative savePath resolves against. Defaults to the server working directory.',
+            description: 'Directory a relative savePath resolves against. Defaults to the agent workspace.',
           },
           maxRetries: { type: 'number', description: 'Override the retry count (default 15).' },
         },

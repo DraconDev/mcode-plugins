@@ -107,20 +107,19 @@ export function createTools({ workspaceCwd, sessionKey }) {
             type: 'array',
             items: { type: 'string' },
             description:
-              'Up to five local PNG/JPEG/WebP paths to edit from. Relative paths resolve against ' +
-              'the server working directory, so use absolute paths.',
+              'Up to five local PNG/JPEG/WebP paths to edit from. Relative paths resolve ' +
+              'against the agent workspace; absolute paths are unambiguous and preferred.',
           },
           savePath: {
             type: 'string',
             description:
-              'Where to write the image. Use an ABSOLUTE path: the plugin server runs with the ' +
-              'home directory as its working directory, not your workspace, so a relative path ' +
-              'would land in the wrong place.',
+              'Where to write the image. A relative path resolves against the agent ' +
+              'workspace, but an absolute path (e.g. /home/you/project/hero.png) is ' +
+              'unambiguous and preferred.',
           },
           baseDir: {
             type: 'string',
-            description:
-              'Directory a relative savePath resolves against. Defaults to the server working directory.',
+            description: 'Directory a relative savePath resolves against. Defaults to the agent workspace.',
           },
           maxRetries: { type: 'number', description: 'Override the retry count (default 15).' },
         },
