@@ -60,8 +60,6 @@ function install(args, dataDir) {
   }
 }
 
-const sandbox = mkdtempSync(join(tmpdir(), 'mcode-install-test-'));
-
 try {
   // A sandbox with two installed plugins, so a test can prove that installing
   // one does not disturb the others.
