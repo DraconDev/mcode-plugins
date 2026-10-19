@@ -10,10 +10,16 @@
  *
  * Output
  * ------
- * MiniMax Code turns a `{"decision": "block", "reason": "..."}` result from a
- * PostToolUse hook into `additionalContext`, which is injected into the
- * conversation. The tool already ran, so the hook never blocks anything — it
- * only tells the model what to do next.
+ * The hook writes a `hookSpecificOutput` with `additionalContext`. MiniMax Code
+ * merges that into the tool result as a `<plugin-hook-context>` block, so the
+ * model sees the failure and the instruction to retry it as part of the tool
+ * output.
+ *
+ * The shape matters: a top-level `{"decision": "block"}` is the *blocking*
+ * form, and MiniMax Code treats a blocked PostToolUse as a structured block —
+ * which closes the tool-result delivery seam and makes the *next* tool call
+ * fail with "Tool-result delivery seam is closed." The `hookSpecificOutput`
+ * form injects the same context without blocking anything.
  *
  * A failure is only treated as transient when it both reads like a failure and
  * matches a transient signature. A successful command that happens to print
@@ -116,12 +122,14 @@ async function main() {
 
   process.stdout.write(
     `${JSON.stringify({
-      decision: 'block',
-      reason: retryInstruction({
-        toolName,
-        detail: text.slice(-300) || 'transient error',
-        attempt: attempts,
-      }),
+      hookSpecificOutput: {
+        hookEventName: 'PostToolUse',
+        additionalContext: retryInstruction({
+          toolName,
+          detail: text.slice(-300) || 'transient error',
+          attempt: attempts,
+        }),
+      },
     })}\n`,
   );
 }
