@@ -147,6 +147,7 @@ function findSessionDir(sessionId) {
   if (!sessionId) return null;
   const suffix = `-session_${Buffer.from(sessionId, 'utf8').toString('base64')}`;
   const root = join(homedir(), '.minimax', 'v2', 'sessions');
+  // Layout is sessions/<YYYY>/<MM>/<DD>/<time>-session_<base64 session id>.
   let years;
   try {
     years = readdirSync(root, { withFileTypes: true });
@@ -171,8 +172,18 @@ function findSessionDir(sessionId) {
       }
       for (const day of days) {
         if (!day.isDirectory()) continue;
-        if (day.name.endsWith(suffix)) {
-          return join(root, year.name, month.name, day.name);
+        let sessions;
+        try {
+          sessions = readdirSync(join(root, year.name, month.name, day.name), {
+            withFileTypes: true,
+          });
+        } catch {
+          continue;
+        }
+        for (const session of sessions) {
+          if (session.isDirectory() && session.name.endsWith(suffix)) {
+            return join(root, year.name, month.name, day.name, session.name);
+          }
         }
       }
     }
