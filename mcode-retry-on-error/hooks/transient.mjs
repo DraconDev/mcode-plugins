@@ -45,6 +45,24 @@ const TERMINAL_FAILURE = [
 ];
 
 /**
+ * Words that say a limit is actually in force.
+ */
+const LIMIT_CONTEXT = String.raw`\b(?:429|too\s+many\s+requests|exceeded|exhausted|hit|reached|triggered|error|errors|denied|blocked|back\s+off|try\s+again|please\s+retry|retry\s+later|window)\b`;
+
+/**
+ * Rate limits.
+ *
+ * "rate limit" is also the phrase every API client's own code and docs use,
+ * so it only counts next to a word that says the limit is in force — and
+ * never in a sentence that merely mentions one.
+ */
+const RATE_LIMIT_TRANSIENT = [
+  /\brate[_\s-]?limit[_\s-]?(?:exceeded|exhausted|hit|reached|triggered)\b/i,
+  new RegExp(`rate[\\s_-]?limit(?:ed|ing|s)?\\b[^\\n]{0,40}${LIMIT_CONTEXT}`, 'i'),
+  new RegExp(`${LIMIT_CONTEXT}[^\\n]{0,40}rate[\\s_-]?limit(?:ed|ing|s)?\\b`, 'i'),
+];
+
+/**
  * Quota exhaustion.
  *
  * "quota" is also the word a host policy uses — "command exceeded quota
@@ -116,7 +134,6 @@ const WEAK_TRANSIENT = [
  * tier below and have to sit next to a failure word in a status position.
  */
 const STRONG_TRANSIENT = [
-  /rate[\s_-]?limit/i,
   /too many requests/i,
   /overloaded/i,
   /temporarily unavailable/i,
@@ -127,6 +144,7 @@ const STRONG_TRANSIENT = [
   /socket hang up/i,
   /fetch failed/i,
   /network error/i,
+  ...RATE_LIMIT_TRANSIENT,
   ...QUOTA_TRANSIENT,
   ...TIMEOUT_TRANSIENT,
 ];
