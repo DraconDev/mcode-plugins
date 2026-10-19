@@ -32,11 +32,25 @@ jobs:
       - name: Test the workspace resolver
         run: node scripts/workspace-test.mjs
 
+      - name: Test the MCP transport
+        run: node scripts/mcp-server-test.mjs
+
+      - name: Test the installer
+        run: node scripts/install-script-test.mjs
+
       - name: Check the shared modules are in sync
         run: node scripts/sync-shared.mjs --check
 
       - name: Test the Chrome bridge protocol
         run: node mcode-chrome/scripts/server-mode-test.mjs
+
+      - name: Test the Chrome regressions
+        run: node mcode-chrome/scripts/regression-test.mjs
+
+      - name: Test the path containment
+        run: |
+          node mcode-agnes/scripts/path-safety-test.mjs
+          node mcode-codex/scripts/path-safety-test.mjs
 
       - name: Test the Stop hook
         run: node mcode-retry-on-error/scripts/hook-test.mjs

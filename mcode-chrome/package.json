@@ -7,7 +7,8 @@
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "build:manifest": "node scripts/build-manifest.mjs",
-    "test": "node scripts/server-mode-test.mjs && node scripts/smoke-test.mjs",
+    "test": "node scripts/regression-test.mjs && node scripts/server-mode-test.mjs && node scripts/smoke-test.mjs",
+    "test:regression": "node scripts/regression-test.mjs",
     "test:server": "node scripts/server-mode-test.mjs",
     "test:smoke": "node scripts/smoke-test.mjs",
     "test:e2e": "node scripts/e2e-test.mjs",

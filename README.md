@@ -256,8 +256,13 @@ Every plugin has a test script, and they all need nothing but Node:
 ```bash
 node scripts/retry-test.mjs                        # the retry policy
 node scripts/workspace-test.mjs                    # the workspace directory resolver
+node scripts/mcp-server-test.mjs                   # the MCP stdio transport
+node scripts/install-script-test.mjs               # the plugin installer
 node scripts/sync-shared.mjs --check               # shared modules in sync
 node mcode-chrome/scripts/server-mode-test.mjs     # standalone protocol round trip
+node mcode-chrome/scripts/regression-test.mjs      # redaction, tab groups, screenshots
+node mcode-agnes/scripts/path-safety-test.mjs      # path containment and image limits
+node mcode-codex/scripts/path-safety-test.mjs      # path containment and image limits
 node mcode-chrome/scripts/smoke-test.mjs           # MCP handshake against the live bridge
 node mcode-agnes/scripts/smoke-test.mjs            # status only, no credits spent
 node mcode-agnes/scripts/smoke-test.mjs --generate # also generate one real image
