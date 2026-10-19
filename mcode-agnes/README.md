@@ -40,6 +40,11 @@ directory mcode was launched from — because MiniMax Code spawns plugin MCP ser
 directory as their working directory and passes no workspace path in the environment. An absolute
 path is unambiguous and preferred; `baseDir` overrides the base directory for a relative path.
 
+Paths are contained to the workspace. A relative path that would escape its base is refused, and
+a `baseDir` that points outside the workspace is refused too — so a prompt that asks for
+`../../.ssh/authorized_keys` gets an error instead of a file. The refusal happens before the
+request is sent, so nothing is generated for a doomed call.
+
 `MCODE_WORKSPACE` overrides the workspace directory that relative paths resolve against.
 
 ## Test

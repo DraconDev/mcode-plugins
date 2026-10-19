@@ -637,7 +637,7 @@ const TOOL_DEFS = [
         quality: { type: 'number', description: 'JPEG quality, 0-100.' },
         fullPage: {
           type: 'boolean',
-          description: 'Capture the full scrollable page as stitched tiles.',
+          description: 'Capture the full scrollable page as separate viewport tiles.',
         },
         ...TARGET_PROPS,
         ...BACKGROUND_PROP,

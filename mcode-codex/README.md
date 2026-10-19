@@ -49,6 +49,14 @@ servers with the home directory as their working directory and passes no workspa
 environment. An absolute path is unambiguous and preferred; `baseDir` overrides the base directory
 for a relative path.
 
+Paths are contained to the workspace. A relative path that would escape its base is refused, and
+a `baseDir` that points outside the workspace is refused too — so a prompt that asks to read
+`../secret.png` gets an error instead of a file. The refusal happens before the request is sent,
+so nothing is generated for a doomed call.
+
+Reference images are capped at five per call and 20 MB each. Both limits are checked before the
+file is read, and before any request is sent.
+
 `MCODE_WORKSPACE` overrides the workspace directory that relative paths resolve against.
 
 ## Test

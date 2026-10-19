@@ -36,7 +36,10 @@ What it does about that:
   browser `Origin`, so a web page cannot drive it. A local process can, which is the same trust
   level the underlying pi-chrome bridge uses.
 - **A file path is contained to the workspace.** A relative `savePath` resolves against the
-  workspace and cannot escape it; a `baseDir` outside the workspace is refused.
+  workspace and cannot escape it; a `baseDir` outside the workspace is refused. The check is
+  lexical, on the resolved path — a symlink *inside* the workspace that points outside it is still
+  followed. That is a deliberate trade-off: a `realpath`-based check would break a workspace that
+  is itself a symlink, which is common in a dotfiles setup.
 
 What it does not do: it does not sandbox the page, and it does not stop a prompt injection in the
 page content from steering the model. Treat any page the plugin opens as untrusted input, and use
