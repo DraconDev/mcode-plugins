@@ -19,18 +19,28 @@
  * (`messages.jsonl`) and looks at the tail:
  *
  *   assistant.stopReason === "aborted"  -> the user cancelled. Never retry.
- *   assistant.stopReason === "error"    -> the turn failed. Retry.
+ *   assistant.stopReason === "error"    -> the turn failed. Retry when the
+ *                                          error text looks transient.
  *   last toolResult.isError             -> a tool call failed. Retry when the
  *                                          failure looks transient (rate
  *                                          limit, quota, timeout, 5xx, network).
  *   a user message after the last reply -> the user has spoken. Reset and stop.
  *
+ * Only the *current* turn counts. A tool result that comes before the last
+ * assistant message belongs to a step the model has already recovered from —
+ * it produced its final answer after that failure — and retrying it would
+ * repeat an operation that already succeeded.
+ *
  * Safety boundaries
  * -----------------
  *   - An aborted turn is never retried.
+ *   - A permanent failure is never retried: a host-level validation or
+ *     permission error, a rejected credential, a content-filter refusal.
  *   - A clean turn resets the retry state, so the next failure starts fresh.
  *   - A new user message resets the retry state — the same escape hatch pi's
  *     `pi-retry-on-error` gives ("the user starts another prompt").
+ *   - The retry budget is finite, so a permanent failure cannot cost the
+ *     runtime's full allowance of eight Stop continuations per turn.
  *   - The in-hook delay is capped so the hook always finishes inside its
  *     10s timeout; a longer backoff is handed to the tool instead.
  *   - Any internal error exits quietly, so a broken hook can never wedge a
@@ -41,8 +51,8 @@
  *   MCODE_RETRY_DELAY_MS          base backoff delay (default 5000)
  *   MCODE_RETRY_BACKOFF_MULTIPLIER  multiplier per attempt (default 2)
  *   MCODE_RETRY_MAX_DELAY_MS      cap on a single delay (default 60000)
- *   MCODE_RETRY_MAX_RETRIES       attempts before giving up (default unlimited)
- *   MCODE_RETRY_MAX_DURATION_MS   total window before giving up (default unlimited)
+ *   MCODE_RETRY_MAX_RETRIES       attempts before giving up (default 3)
+ *   MCODE_RETRY_MAX_DURATION_MS   total window before giving up (default 120000)
  *   MCODE_RETRY_DISABLED          set to 1 to turn the hook into a no-op
  */
 
@@ -120,12 +130,32 @@ const BACKOFF_MULTIPLIER = (() => {
   return Number.isFinite(parsed) && parsed >= 1 ? Math.min(parsed, 100) : 2;
 })();
 const MAX_DELAY_MS = configNumber('maxDelayMs', 'MCODE_RETRY_MAX_DELAY_MS', 60_000);
-const MAX_RETRIES = configNumber('maxRetries', 'MCODE_RETRY_MAX_RETRIES', Number.POSITIVE_INFINITY);
-const MAX_DURATION_MS = configNumber(
-  'maxDurationMs',
-  'MCODE_RETRY_MAX_DURATION_MS',
-  Number.POSITIVE_INFINITY,
-);
+
+/**
+ * The retry budget: how many continuations a failure episode gets, and how
+ * long that episode may last.
+ *
+ * The defaults are finite on purpose. The runtime allows eight Stop
+ * continuations per turn, so an unbounded plugin turns one permanent failure
+ * into eight extra model round-trips. Three continuations is enough for a
+ * rate limit that resets in a minute, and short enough that a failure that
+ * will never work does not eat the session.
+ *
+ * `null` in the config file is the explicit opt-out and means "no limit";
+ * the environment variable overrides the file.
+ */
+const MAX_RETRIES = configLimit('maxRetries', 'MCODE_RETRY_MAX_RETRIES', 3);
+const MAX_DURATION_MS = configLimit('maxDurationMs', 'MCODE_RETRY_MAX_DURATION_MS', 120_000);
+
+/**
+ * How many continuations one turn may collect.
+ *
+ * The retry counter is reset by a *clean* turn, so a turn that recovers and
+ * then fails again would get a fresh budget every time. This counter is
+ * keyed by the turn id instead, so it survives a clean continuation inside
+ * the same turn and the turn as a whole still ends.
+ */
+const MAX_CONTINUATIONS = MAX_RETRIES;
 const DISABLED =
   CONFIG.enabled === false ||
   process.env.MCODE_RETRY_DISABLED === '1' ||
