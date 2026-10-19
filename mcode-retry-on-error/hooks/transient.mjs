@@ -100,6 +100,11 @@ export function looksFailed(text) {
 /**
  * Is this a retryable failure?
  *
+ * When the host gives an explicit failure flag, that flag alone decides
+ * whether it *is* a failure, and only the transient signature still has to
+ * match. When there is no flag, the text has to read like a failure *and*
+ * match a transient signature.
+ *
  * @param {object} options
  * @param {string} options.text - the tool response text
  * @param {boolean} [options.failed] - an explicit failure flag, when the host provides one
@@ -107,7 +112,7 @@ export function looksFailed(text) {
  */
 export function isRetryableFailure({ text, failed }) {
   if (failed === false) return false;
-  if (!looksFailed(text)) return false;
+  if (failed !== true && !looksFailed(text)) return false;
   return isTransient(text) || RETRYABLE_STATUS.test(text);
 }
 

@@ -222,23 +222,6 @@ function findSessionDir(sessionId) {
   return null;
 }
 
-function isTransient(text) {
-  if (!text) return false;
-  return TRANSIENT_PATTERNS.some((pattern) => pattern.test(text));
-}
-
-function textOf(content) {
-  if (typeof content === 'string') return content;
-  if (!Array.isArray(content)) return '';
-  return content
-    .map((block) => {
-      if (typeof block === 'string') return block;
-      if (block && typeof block.text === 'string') return block.text;
-      return '';
-    })
-    .join('\n');
-}
-
 function loadState(sessionId) {
   const file = join(DATA_DIR, `${sessionId.replace(/[^A-Za-z0-9._-]/g, '_')}.json`);
   try {
