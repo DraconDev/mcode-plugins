@@ -46,7 +46,7 @@
         },
         {
           "name": "tab",
-          "description": "List, open, activate, close, or group tabs in the user's real Chrome. Use action=list to see what is open. New tabs join this session's tab group.",
+          "description": "List, open, activate, close, or group tabs in the user's real Chrome. Use action=list to see what is open. New tabs, and tabs you group, join this session's tab group.",
           "inputSchema": {
             "type": "object",
             "properties": {
@@ -681,7 +681,7 @@
         },
         {
           "name": "screenshot",
-          "description": "Capture a screenshot of the page in the user's real Chrome. The image is returned inline; pass path to also save it to disk.",
+          "description": "Capture a screenshot of the page in the user's real Chrome. The image is returned inline; pass path to also save it to disk. A full-page capture is returned as separate viewport tiles, which are saved as numbered files (shot-1.png, shot-2.png, …).",
           "inputSchema": {
             "type": "object",
             "properties": {

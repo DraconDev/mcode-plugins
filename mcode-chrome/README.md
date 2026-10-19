@@ -1,11 +1,11 @@
 # mcode-chrome
 
 A MiniMax Code plugin that gives mcode access to the user's **real, signed-in Chrome** — the same
-browser, the same profile, the same logins — the way `pi` and `muse` already do on this machine.
+browser, the same profile, the same logins — the way [pi](https://github.com/tianrendong/pi) and
+muse already do.
 
-It reuses the `Pi Chrome Connector` companion extension and the pi-chrome loopback bridge that are
-already installed here. Nothing is re-launched, nothing is re-logged-in, and the user's cookies are
-the user's cookies.
+It reuses the `Pi Chrome Connector` companion extension and the pi-chrome loopback bridge. Nothing
+is re-launched, nothing is re-logged-in, and the user's cookies are the user's cookies.
 
 ## How it works
 

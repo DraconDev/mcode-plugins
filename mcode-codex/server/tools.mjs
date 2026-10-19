@@ -46,20 +46,105 @@ function retryOptions(args) {
 }
 
 /**
+ * True when `target` is `base` itself or lies underneath it.
+ *
+ * The comparison is lexical on already-resolved paths: `relative()` yields a
+ * path that starts with `..` when the target escapes the base, and an
+ * absolute path when the two live on different roots.
+ */
+function isInside(base, target) {
+  const rel = relative(base, target);
+  if (rel === '') return true;
+  if (isAbsolute(rel)) return false;
+  return rel !== '..' && !rel.startsWith(`..${sep}`);
+}
+
+/**
+ * Resolve the directory a relative path is anchored to.
+ *
+ * `baseDir` is an override for *where inside the workspace* a relative path
+ * lands, not a way to redirect a read or a write to an arbitrary directory,
+ * so it has to stay under the workspace.
+ *
+ * @param {string|undefined} baseDir
+ * @param {string} workspaceCwd
+ * @returns {string} an absolute path
+ */
+export function resolveBaseDir(baseDir, workspaceCwd) {
+  const workspace = resolve(workspaceCwd);
+  if (baseDir === undefined || baseDir === null || baseDir === '') return workspace;
+  const base = isAbsolute(baseDir) ? baseDir : resolve(workspace, baseDir);
+  if (!isInside(workspace, base)) {
+    throw new Error(
+      `baseDir must stay inside the workspace (${workspace}). Refused: ${baseDir}`,
+    );
+  }
+  return base;
+}
+
+/**
+ * Resolve a caller-supplied path against the workspace.
+ *
+ * The rule is the same for a file that is written (`savePath`) and a file
+ * that is read (`referenceImages`): a relative path is resolved against the
+ * base and has to stay inside it, so `../../.ssh/authorized_keys` is refused
+ * instead of escaping the workspace. An absolute path is taken at face
+ * value, because that is a documented and deliberate feature — "an absolute
+ * path is unambiguous and preferred".
+ *
+ * @param {object} options
+ * @param {string} options.path
+ * @param {string} [options.baseDir]
+ * @param {string} options.workspaceCwd
+ * @param {string} [options.label] - what the path is, for the error message
+ * @returns {string} an absolute path
+ */
+export function resolveToolPath({ path, baseDir, workspaceCwd, label = 'path' }) {
+  const base = resolveBaseDir(baseDir, workspaceCwd);
+  if (isAbsolute(path)) return path;
+  const target = resolve(base, path);
+  if (!isInside(base, target)) {
+    throw new Error(
+      `${label} must stay inside the workspace (${base}). Refused: ${path}`,
+    );
+  }
+  return target;
+}
+
+/**
  * Read local reference images and encode them for the request.
+ *
+ * The count limit is checked before anything is read, so a batch of fifty
+ * large files never reaches the disk. The per-file size limit is checked on
+ * the bytes we hold, before base64 inflates them by a third.
  *
  * @param {string[]} paths
  * @param {string} baseDir
+ * @param {string} workspaceCwd
  * @returns {Promise<Array<{mimeType: string, data: string}>>}
  */
-async function loadReferenceImages(paths, baseDir) {
+export async function loadReferenceImages(paths, baseDir, workspaceCwd) {
+  if (paths.length > MAX_EDIT_IMAGES) {
+    throw new Error(`Too many reference images (${paths.length}, limit ${MAX_EDIT_IMAGES}).`);
+  }
   const images = [];
   for (const path of paths) {
-    const target = resolve(baseDir, path);
-    const buffer = await readFile(target);
+    const target = resolveToolPath({
+      path,
+      baseDir,
+      workspaceCwd,
+      label: 'reference image',
+    });
     const mimeType = MIME_BY_EXTENSION[extname(target).toLowerCase()];
     if (!mimeType) {
       throw new Error(`Unsupported reference image type: ${path}. Use PNG, JPEG or WebP.`);
+    }
+    const buffer = await readFile(target);
+    if (buffer.length > MAX_INPUT_IMAGE_BYTES) {
+      throw new Error(
+        `Reference image is too large: ${path} is ${buffer.length} bytes ` +
+          `(limit ${MAX_INPUT_IMAGE_BYTES} bytes).`,
+      );
     }
     images.push({ mimeType, data: buffer.toString('base64') });
   }
@@ -142,9 +227,26 @@ const TOOL_DEFS = [
     handler: async (args, { workspaceCwd, sessionKey }) => {
       try {
         const credential = await resolveCodexCredential();
-        const baseDir = args.baseDir ?? workspaceCwd;
-        const inputImages = await loadReferenceImages(args.referenceImages ?? [], baseDir);
+        // The base directory is an override for where inside the workspace a
+        // relative path lands, so it can never redirect a read or a write
+        // somewhere else.
+        const baseDir = resolveBaseDir(args.baseDir, workspaceCwd);
+        const inputImages = await loadReferenceImages(
+          args.referenceImages ?? [],
+          baseDir,
+          workspaceCwd,
+        );
         const outputFormat = args.outputFormat ?? 'png';
+        // Resolved before the call, so a path that escapes the workspace is
+        // refused without spending a generation.
+        const target = args.savePath
+          ? resolveToolPath({
+              path: args.savePath,
+              baseDir,
+              workspaceCwd,
+              label: 'savePath',
+            })
+          : null;
 
         const image = await withRetry(
           () =>
@@ -163,8 +265,7 @@ const TOOL_DEFS = [
         const mimeType = `image/${outputFormat === 'jpeg' ? 'jpeg' : outputFormat}`;
         const blocks = [{ type: 'image', data: image.base64, mimeType }];
 
-        if (args.savePath) {
-          const target = resolve(baseDir, args.savePath);
+        if (target) {
           await mkdir(dirname(target), { recursive: true });
           await writeFile(target, Buffer.from(image.base64, 'base64'));
           blocks.push({ type: 'text', text: `Saved to ${target}.` });
