@@ -1,24 +1,38 @@
 # mcode-plugins
 
-MiniMax Code plugins for this machine, plus the small runtime repairs they depend on.
+Plugins for [MiniMax Code](https://github.com/minimax-ai/code) (`@minimax-ai/code`) that give it
+three things it does not ship with: a browser it can actually drive, image and video generation,
+and a retry policy that does not give up after half a minute.
 
-MiniMax Code plugins are directories that mcode loads: a manifest, an optional MCP server, and
-optional skills. Local plugins live at `~/.minimax/plugins/<name>/` and are enabled by presence
-there.
-
-## What is here
+Everything here is plain Node — no `node_modules`, no build step, no framework. Clone it, run one
+script, and the plugins are installed.
 
 | Plugin | What it does |
 | --- | --- |
-| `mcode-chrome/` | Drive the user's **real, signed-in Chrome** from mcode — real logins, real tabs, the tab you already have open. |
-| `mcode-agnes/` | Agnes AI image and video generation, using the credential pi already holds. |
-| `mcode-codex/` | ChatGPT subscription (Codex) image generation and editing, using the credential pi already holds. |
-| `mcode-retry-on-error/` | Continue a turn that ended in an error or a rate-limited tool call, with backoff. |
-| `scripts/apply-mcode-rm-shim-fix.mjs` | Repairs a broken recoverable-delete shim in `@minimax-ai/code` 0.6.12. See [Runtime repair](#runtime-repair). |
-| `scripts/apply-mcode-llm-retry-policy.mjs` | Raises the provider retry budget to six hours and makes spent quotas retryable. See [Runtime repair](#runtime-repair-the-provider-retry-budget). |
-| `shared/` | The retry core, the MCP stdio server and the workspace resolver, copied into each plugin that uses them. |
+| [`mcode-chrome/`](mcode-chrome/) | Drive the user's **real, signed-in Chrome** — real logins, real tabs, the tab already open. 23 tools. |
+| [`mcode-agnes/`](mcode-agnes/) | Agnes AI image and video generation, using the credential pi already holds. 3 tools. |
+| [`mcode-codex/`](mcode-codex/) | ChatGPT-subscription (Codex) image generation and editing, using the credential pi already holds. 2 tools. |
+| [`mcode-retry-on-error/`](mcode-retry-on-error/) | Continue a turn that ended in an error or a rate-limited tool call, with backoff. Hook-based, no tools. |
+
+---
+
+## Requirements
+
+- **Node 18 or newer** — the plugins use `fetch` and `AbortSignal.timeout`. Check with `node --version`.
+- **MiniMax Code 0.6.12 or newer** — the manifest format (`schemaVersion: 1`) and the hook events
+  these plugins use are that version's.
+- **`mcode` on `PATH`** — for the install script to register the plugin.
+- For `mcode-chrome` only: the **Pi Chrome Connector** browser extension, loaded into your normal
+  Chrome profile. See [`mcode-chrome/README.md`](mcode-chrome/README.md).
 
 ## Install
+
+```bash
+git clone https://github.com/DraconDev/mcode-plugins.git
+cd mcode-plugins
+```
+
+Then install one plugin, or all four:
 
 ```bash
 scripts/install-plugin.sh mcode-chrome
@@ -27,62 +41,217 @@ scripts/install-plugin.sh mcode-codex
 scripts/install-plugin.sh mcode-retry-on-error
 ```
 
-The installer copies the plugin to `~/.minimax/plugins/<name>/` and registers it with the local
-marketplace. Local plugins are enabled by presence in that folder — `mcode plugin add -m local`
-rejects a re-install of a plugin that is already there, so the script checks the list first.
+```bash
+# or all of them
+for plugin in mcode-chrome mcode-agnes mcode-codex mcode-retry-on-error; do
+  scripts/install-plugin.sh "$plugin"
+done
+```
 
-Verify with `mcode plugin list`.
+The script copies the plugin to `~/.minimax/plugins/<name>/`, where local plugins are enabled by
+presence, and registers it with the local marketplace. Verify with:
 
-## The retry policy
+```bash
+mcode plugin list
+```
 
-The image plugins share one retry core (`shared/retry.mjs`), and the behaviour is deliberate:
+You should see each plugin as `enabled`. To update a plugin, re-run its install script — it replaces
+the installed copy in place.
 
-- **15 attempts**, each a little later than the last — roughly two to three minutes in total
-- retried: 429, 408, 5xx, timeouts, dropped connections, `fetch failed`
-- a server's `Retry-After` is honoured
-- **not** retried: 400, 401, 403, 404, 422 — a bad request or a bad credential will fail
-  identically every time, and looping on it just burns quota
-- exponential backoff with jitter, so several agents hitting the same limit do not resynchronise
-
-The image plugins are the reason this exists: the ChatGPT subscription has its own quota and will
-answer 429 under load, and a task that dies on the first 429 is worse than one that waits.
-
-`mcode-retry-on-error` is a different mechanism for the same goal: it works at the *tool* and *turn*
-level, so it also covers failures in tools that have no retry policy of their own.
-
-### What the retry plugin can and cannot reach
-
-It has two hooks. `PostToolUse` fires the instant a tool fails and injects a retry instruction
-into the tool result, while the model is still working. `Stop` is the backstop for a turn that
-tried to end in an error.
-
-**Provider rate limits are not reachable by any plugin, and mcode already handles them.** The
-`The model provider is rate limiting requests. Code: 50150` error never reaches the session
-transcript, and the `Stop` hook never fires for it — the run aborts before a turn completes.
-
-Measured: across 7,185 assistant messages in a day's transcripts, the `stopReason` is only ever
-`toolUse` or `stop` — never `error` — and the provider error string appears in no transcript at
-all. Forcing a provider failure with an unreachable endpoint confirmed it: the run failed and the
-hook never ran.
-
-mcode's own retry of that layer had a hardcoded budget of five — about half a minute of waiting, then
-the turn dies. It is raised to six hours by `scripts/apply-mcode-llm-retry-policy.mjs` — see
-[Runtime repair](#runtime-repair-the-provider-retry-budget).
+> Installing a plugin does not stop you from using mcode without it. Each one is independent; install
+> only the ones you want.
 
 ## Credentials
 
-`mcode-agnes` and `mcode-codex` read the credential **pi already has**, from
-`~/.pi/agent/auth.json`:
+`mcode-agnes` and `mcode-codex` read the credential **pi already has**, from `~/.pi/agent/auth.json`:
 
 | Plugin | Key in pi's store | Environment override |
 | --- | --- | --- |
 | `mcode-agnes` | `agnes` | `AGNES_API_KEY`, `AGNES_CN_API_KEY` |
 | `mcode-codex` | `openai-codex` | `CODEX_IMAGE_ACCESS_TOKEN`, `CODEX_IMAGE_ACCOUNT_ID` |
 
-One login, two agents. The codex plugin refreshes an expired token in memory and does **not** write
-back to pi's auth file, so it cannot corrupt another tool's state.
+One login, two agents. The codex plugin refreshes an expired token **in memory only** and never
+writes back to pi's auth file, so it cannot corrupt another tool's state. If you would rather not
+use pi's store, set the environment variable instead — the plugin prefers it.
 
-## Test
+`mcode-chrome` needs no credential of its own; it uses the session your Chrome extension already has.
+
+## The plugins
+
+### `mcode-chrome` — drive your real browser
+
+A MiniMax Code plugin that drives the **user's own Chrome** through a companion extension, rather
+than a separate automation browser. That means the agent works inside the session you are already
+signed in to, on the tabs you already have open.
+
+```
+status, authorize, revoke, tab, snapshot, find, inspect, navigate, evaluate,
+click, type, fill, key, wait_for, console_messages, network_requests,
+network_request, screenshot, hover, drag, tap, scroll, upload_file
+```
+
+Setup, the wire protocol, and the security posture are documented in
+[`mcode-chrome/README.md`](mcode-chrome/README.md). The short version: load the extension, run
+`mcode-chrome`'s `install.sh`, and keep that Chrome window open.
+
+### `mcode-agnes` — Agnes AI images and video
+
+```
+status, generate_image, generate_video
+```
+
+Takes a prompt, optional reference images, and writes the result to disk. A `savePath` relative to
+the workspace lands in the workspace; `baseDir` overrides the base. A video can be driven from
+text-to-video, one keyframe, or two.
+
+### `mcode-codex` — ChatGPT subscription images
+
+```
+status, generate_image
+```
+
+Generates from a prompt and up to five reference images, and can edit an existing picture in a
+consistent style. The ChatGPT subscription has its own quota and will answer `429` under load —
+which is why the retry policy below exists.
+
+### `mcode-retry-on-error` — do not give up
+
+Two hooks:
+
+- **`PostToolUse`** fires the instant a tool fails, while the model is still working, and injects a
+  retry instruction into the tool result.
+- **`Stop`** is the backstop for a turn that tried to end in an error — it blocks the turn and feeds
+  a retry instruction back to the model.
+
+Both only act on *transient* failures. A validation error, a permission denial, a missing file, an
+authentication failure, a content filter — those are terminal, and retrying them just burns the
+user's time and quota. A rate limit, a timeout, a dropped connection, a `503` — those clear on
+their own, so the plugin keeps trying.
+
+## The retry policy
+
+The image plugins share one retry core, [`shared/retry.mjs`](shared/retry.mjs):
+
+- **16 attempts** — the first plus 15 retries — each a little later than the last, over roughly
+  two to three minutes.
+- **Retried:** 429, 408, 5xx, timeouts, dropped connections, `fetch failed`. A server's
+  `Retry-After` is honoured.
+- **Not retried:** 400, 401, 403, 404, 422 — a bad request or a bad credential fails identically
+  every time.
+- Exponential backoff with jitter, so several agents hitting the same limit do not resynchronise
+  into a thundering herd.
+- The total wall-clock budget is real: a delay is clamped to what is left of it, and no attempt
+  starts after it has expired.
+
+`mcode-retry-on-error` is a different mechanism for the same goal: it works at the tool and turn
+level, so it also covers failures in tools that have no retry policy of their own.
+
+### Provider rate limits are not reachable by a plugin
+
+MiniMax Code retries a rate-limited provider request itself, and that error never reaches the
+session transcript — the `Stop` hook does not fire for it, because the run aborts before a turn
+completes. Measured: across 7,185 assistant messages in a day's transcripts, the `stopReason` is
+only ever `toolUse` or `stop` — never `error`.
+
+So the provider layer has to be repaired in the mcode bundle itself. See
+[Runtime repair](#runtime-repair-the-provider-retry-budget) below.
+
+## Runtime repair: the provider retry budget
+
+**This is optional, and it patches a third-party install.** MiniMax Code retries a rate-limited
+provider request with a hardcoded budget:
+
+```js
+{maxRetries: 5, baseDelayMs: 1000, maxDelayMs: 30000, maxRetryElapsedMs: 120000}
+```
+
+Five retries means six attempts over about twenty seconds of waiting, then the turn dies. There is
+no way to configure it: the policy is merged in by a minified function, but the value it would
+merge never arrives — there is no config key and no environment variable for it anywhere in the
+bundle. The constant is the only lever.
+
+`scripts/apply-mcode-llm-retry-policy.mjs` raises it to a budget that outlasts a quota window
+rather than a momentary burst:
+
+```js
+{maxRetries: 200, baseDelayMs: 1500, maxDelayMs: 300000, maxRetryElapsedMs: 21600000}
+```
+
+The first few attempts stay close together, so a rate limit that clears in seconds is caught
+almost immediately. The delay then doubles up to a five-minute cap, and the loop keeps going for
+**six hours** — long enough to outlast a quota that takes hours to reset. The attempt count is a
+backstop; the wall clock is what actually binds.
+
+It also patches the classifier, so that a **spent quota**, **exhausted credits** and a plain
+**5xx** are retried instead of being treated as terminal:
+
+| Code | Meaning | Before | After |
+| --- | --- | --- | --- |
+| 50150 | `LLM_TPM_RATE_LIMITED` | retried | retried |
+| 50111 | `LLM_RATE_LIMITED` | retried | retried |
+| 50151 | `LLM_CLUSTER_OVERLOADED` | retried | retried |
+| 42212 | `USAGE_LIMIT_EXCEEDED` | **terminal** | retried |
+| 50110 | `LLM_CREDITS_EXHAUSTED` | **terminal** | retried |
+| 5xx | a server error | **terminal** | retried |
+| 50112 | `LLM_AUTH_ERROR` (401/403) | terminal | terminal |
+| — | a content filter, a refusal, a bad request, an explicit abort | terminal | terminal |
+
+An authentication failure stays terminal on purpose: a bad credential will not fix itself, and
+retrying it for six hours is pointless.
+
+```bash
+node scripts/apply-mcode-llm-retry-policy.mjs           # patch it
+node scripts/apply-mcode-llm-retry-policy.mjs --check   # report only, no writes
+node scripts/apply-mcode-llm-retry-policy.mjs --revert  # back to MiniMax Code's default
+node scripts/verify-mcode-retry-classifier.mjs          # test the installed classifier
+```
+
+The original chunk is kept as `<chunk>.orig.bak` beside it, and the script refuses to overwrite a
+policy it does not recognise. `mcode update` replaces the bundle wholesale, so **re-run the script
+afterwards** — that is the whole reason it is a script and not a patch file.
+
+**Restart after patching.** Node reads the bundle into memory when a process starts, so a patch on
+disk only reaches processes started afterwards. The script prints the sessions that are still
+running the old code:
+
+```
+WARNING: 19 mcode processes are still running the old code.
+  PID 3804772  started 2026-10-19 12:54:09
+  The oldest has been up for 5h 26m.
+  They keep the old budget — 5 retries, about half a minute — until restarted.
+  Quit those sessions and start mcode again to pick up the new policy.
+```
+
+The same warning appears in `--check` mode.
+
+## Runtime repair: the recoverable-delete shim
+
+MiniMax Code seeds a recoverable-delete `rm` shim at `<dataDir>/shims/rm` and puts it ahead of
+`/bin/rm` on the agent's PATH, so every delete lands in the platform trash instead of being
+unlinked. The shim is generated from a template in the mcode bundle whose shebang is hardcoded to
+`#!/bin/bash`.
+
+On a Nix-based system — where bash lives at `/run/current-system/sw/bin/bash` and `/bin/bash` does
+not exist — the shim cannot exec at all, and **every `rm` in agent bash fails**:
+
+```
+/home/dracon/.minimax/shims/rm: /bin/bash: bad interpreter: No such file or directory
+```
+
+`scripts/apply-mcode-rm-shim-fix.mjs` changes the template's shebang to `#!/usr/bin/env bash`,
+which resolves bash through PATH on both Nix-style and conventional systems, and re-seeds the live
+shim so the fix applies immediately.
+
+```bash
+node scripts/apply-mcode-rm-shim-fix.mjs           # patch the template and re-seed the shim
+node scripts/apply-mcode-rm-shim-fix.mjs --check   # report only, no writes
+```
+
+## Development
+
+### Test
+
+Every plugin has a test script, and they all need nothing but Node:
 
 ```bash
 node scripts/retry-test.mjs                        # the retry policy
@@ -99,7 +268,14 @@ node mcode-retry-on-error/scripts/post-tool-hook-test.mjs # the PostToolUse deci
 node scripts/verify-mcode-retry-classifier.mjs      # the installed provider classifier
 ```
 
-Regenerate the plugin manifests after changing any tool definition:
+`--generate` spends real quota. The other two smoke tests only check the handshake and the
+credential.
+
+### Manifests are generated, not hand-written
+
+Each plugin has a `scripts/build-manifest.mjs` that derives `mcp/<server>.mcp.json` from the tool
+definitions in `server/tools.mjs`, so the declared tool list can never drift from the running
+server. Run all three after changing a tool:
 
 ```bash
 node mcode-agnes/scripts/build-manifest.mjs
@@ -107,168 +283,74 @@ node mcode-codex/scripts/build-manifest.mjs
 node mcode-chrome/scripts/build-manifest.mjs
 ```
 
-## Runtime repair
+CI checks that regenerating them produces no diff.
 
-`@minimax-ai/code` 0.6.12 seeds a recoverable-delete shim at `<dataDir>/shims/rm` and puts it
-ahead of `/bin/rm` on the agent's PATH, so every delete lands in the platform trash instead of
-being unlinked. The shim is generated from a template in the mcode bundle whose shebang is
-hardcoded to `#!/bin/bash`.
+### Shared code is generated, not hand-copied
 
-This machine is Nix-based and has no `/bin/bash` — bash lives at
-`/run/current-system/sw/bin/bash`. The shim therefore could not exec at all, and **every `rm` in
-agent bash failed**:
-
-```
-/home/dracon/.minimax/shims/rm: /bin/bash: bad interpreter: No such file or directory
-```
-
-The fix is one line in the bundle template: `#!/usr/bin/env bash`, which resolves bash through
-PATH on both Nix-style and conventional systems. The app re-seeds the on-disk shim whenever it
-differs from the template, so patching the template is what makes the fix stick.
+`shared/` holds the single copy of the retry core, the MCP server and the workspace resolver. Each
+plugin needs its own copy on disk because a plugin is installed by copying its directory somewhere
+else entirely — it has to be self-contained. `scripts/sync-shared.mjs` keeps those copies identical:
 
 ```bash
-node scripts/apply-mcode-rm-shim-fix.mjs           # patch the template and re-seed the shim
-node scripts/apply-mcode-rm-shim-fix.mjs --check   # report only, no writes
+node scripts/sync-shared.mjs           # copy shared/ into every plugin that has a server/
+node scripts/sync-shared.mjs --check   # fail if they have drifted
 ```
 
-`mcode update` replaces the bundle wholesale, so re-run the script afterwards. The script is
-idempotent and safe to run at any time.
+**Never hand-edit** a plugin's copy of `retry.mjs`, `mcp-server.mjs` or `workspace.mjs` — edit
+`shared/` and re-run the sync.
 
-## Runtime repair: the provider retry budget
+### Relative paths resolve against the workspace, not the home directory
 
-MiniMax Code retries a rate-limited provider request itself, but the budget is a hardcoded
-constant in the bundle:
-
-```js
-{maxRetries: 5, baseDelayMs: 1000, maxDelayMs: 30000, maxRetryElapsedMs: 120000}
-```
-
-Five retries means six attempts over about twenty seconds of waiting, then the turn dies. There is
-no way to configure it: the policy is merged in by `Gpn(t.policy)`, but `t.policy` never arrives —
-the only caller that supplies `resolveLlmRetry` hands back an observer and nothing else, and there
-is no config key or environment variable for it anywhere in the bundle.
-
-`scripts/apply-mcode-llm-retry-policy.mjs` patches the constant so the retry survives a quota
-window rather than a momentary burst:
-
-```js
-{maxRetries: 200, baseDelayMs: 1500, maxDelayMs: 300000, maxRetryElapsedMs: 21600000}
-```
-
-The first few attempts stay close together, so a rate limit that clears in seconds is caught
-almost immediately. The delay then doubles up to a five-minute cap, and the loop keeps going for
-**six hours** — long enough to outlast a quota that takes hours to reset. The attempt count is a
-backstop; the wall clock is what actually binds.
-
-```bash
-node scripts/apply-mcode-llm-retry-policy.mjs           # patch it
-node scripts/apply-mcode-llm-retry-policy.mjs --check   # report only, no writes
-node scripts/apply-mcode-llm-retry-policy.mjs --revert  # back to MiniMax Code's default
-node scripts/verify-mcode-retry-classifier.mjs          # test the installed classifier
-```
-
-Measured against a local endpoint that always answers 429:
-
-| Policy | Attempts | Gaps between attempts | Wall clock |
-| --- | --- | --- | --- |
-| Stock | 6 | 1s, 2s, 4s, 8s, 16s | ~20s |
-| Patched | ~100 | 1.5s, 3s, 6s, 12s, 24s, 48s, 96s, 192s, then 5min | 6h |
-
-The original chunk is kept as `<chunk>.orig.bak` beside it, and the script refuses to overwrite a
-policy it does not recognise. `mcode update` replaces the bundle wholesale, so re-run the script
-afterwards — the same caveat as the shim fix.
-
-This is a policy change to a third-party install, not a bug fix. It is the only lever that exists:
-the provider error never reaches a plugin hook, so no plugin can add retries at that layer.
-
-### Which provider errors this covers
-
-The error in the screenshots is `Code: 50150`, which is `LLM_TPM_RATE_LIMITED` — a token-per-minute
-limit. The retry classifier treats it as **retryable**, so the budget above governs it.
-
-Two neighbouring codes were hardcoded as **terminal**, which meant no retry, no backoff and an
-instant dead turn:
-
-| Code | Meaning | Before | Now |
-| --- | --- | --- | --- |
-| 50150 | `LLM_TPM_RATE_LIMITED` | retried | retried |
-| 50111 | `LLM_RATE_LIMITED` | retried | retried |
-| 50151 | `LLM_CLUSTER_OVERLOADED` | retried | retried |
-| 42212 | `USAGE_LIMIT_EXCEEDED` | **terminal** | retried |
-| 50110 | `LLM_CREDITS_EXHAUSTED` | **terminal** | retried |
-| 5xx | a server error | **terminal** | retried |
-| 50112 | `LLM_AUTH_ERROR` (401/403) | terminal | terminal |
-| — | a content filter, a refusal, a bad request, an explicit abort | terminal | terminal |
-
-A spent quota is the case that matters most here: it resets on a timer, and MiniMax Code was
-giving up on the first response instead of waiting for it. The same script patches the classifier
-so those codes take the retry path, and a plain 5xx with them — MiniMax Code retried 429 and 529
-but gave up on 500, 502 and 504, which is stranger still.
-
-An authentication failure stays terminal on purpose. A bad credential will not fix itself, and
-retrying it for six hours is pointless.
-
-`scripts/verify-mcode-retry-classifier.mjs` tests the classifier that is actually installed: it
-pulls the function out of the live bundle and runs it against realistic error facts. That is the
-only way to cover the managed provider path — MiniMax Code marks BYOK providers as "retry every
-error", so a custom provider never reaches the classifier at all.
-
-### Restarting after the patch
-
-Node reads the bundle into memory when a process starts, so a patch on disk only reaches processes
-started afterwards. A session that was already open when the patch landed keeps the old budget —
-five retries, about half a minute — until it is restarted, and the symptom is confusing: the code
-on disk promises six hours of retries while the session in front of you still gives up immediately.
-
-`scripts/apply-mcode-llm-retry-policy.mjs` therefore checks for mcode processes that started before
-the chunk was written and prints them with their start times:
-
-```
-WARNING: 19 mcode processes are still running the old code.
-  PID 3804772  started 2026-10-19 12:54:09
-  The oldest has been up for 5h 26m.
-  They keep the old budget — 5 retries, about half a minute — until restarted.
-  Quit those sessions and start mcode again to pick up the new policy.
-```
-
-The same warning appears in `--check` mode, so a scheduled check is enough to spot it.
-
-## Known gap: none outstanding
-
-The `mcode-retry-on-error` plugin installs a `Stop` hook that blocks a failed turn and feeds a
-retry instruction back to the model. It works: the hook runs on every turn end, and its
-`{"decision": "block", "reason": "..."}` output arrives at the model wrapped in
-`<plugin-hook-context>`, which continues the turn.
-
-One thing is easy to get wrong when working on it: the hook's data directory is
-`~/.minimax/v2/plugin-data/hooks/<plugin-name>/`, **not** a `.plugin-data` folder next to the
-plugin. Configuration and state live there, and the heartbeat log in that directory is how you
-confirm the hook is running.
-
-The retry behaviour that does *not* need any hook support is the call-level one in
-`shared/retry.mjs`, used by the image plugins.
+MiniMax Code spawns plugin MCP servers with the *home* directory as their working directory and
+passes no workspace path in the environment, so a relative `savePath` would land in `~/…`.
+`shared/workspace.mjs` resolves the workspace instead — `MCODE_WORKSPACE` if it is set, otherwise
+`PWD`, which is the directory mcode was launched from. Every path-taking tool also accepts an
+explicit `baseDir`. Absolute paths always work and are preferred.
 
 ## Conventions
 
-- **Licence.** This repository is AGPL-3.0. Plugins declare the same licence. Code reused from
+- **Licence.** AGPL-3.0-or-later. Each plugin declares the same licence. Code reused from
   MIT-licensed upstream projects stays under its own licence and is attributed in the plugin
   README.
+- **Zero runtime dependencies.** Plugins run from a plain `node` executable with no
+  `node_modules`, so they can be copied anywhere mcode runs.
 - **No vendored bundles.** A stale copy of a 6 MB upstream bundle does not belong in the history.
   Repair upstream tooling with a small, re-runnable script instead, and gitignore the artefacts
   (`*.orig.bak`).
-- **Zero runtime dependencies.** Plugins run from a plain `node` executable with no
-  `node_modules`, so they can be copied anywhere mcode runs.
-- **Shared code is generated, not hand-copied.** `shared/` holds the single copy of the retry core,
-  the MCP server and the workspace resolver; `scripts/sync-shared.mjs` copies it into each plugin and
-  `--check` fails if they have drifted.
-- **Manifests are generated, not hand-written.** Each plugin has a `scripts/build-manifest.mjs` that
-  derives `mcp/<server>.mcp.json` from the tool definitions in `server/tools.mjs`, so the declared
-  tool list can never drift from the running server. Run all three after changing a tool:
-  `node mcode-agnes/scripts/build-manifest.mjs && node mcode-codex/scripts/build-manifest.mjs && node mcode-chrome/scripts/build-manifest.mjs`.
-- **Relative paths resolve against the workspace, not the home directory.** MiniMax Code spawns
-  plugin MCP servers with the *home* directory as their working directory and passes no workspace
-  path in the environment, so a relative `savePath` would land in `~/…`. `shared/workspace.mjs`
-  resolves the workspace instead — `MCODE_WORKSPACE` if it is set, otherwise `PWD`, which is the
-  directory mcode was launched from — and every path-taking tool also accepts an explicit
-  `baseDir`. Absolute paths always work and are preferred.
+- **Shared code is generated.** See above.
+- **Manifests are generated.** See above.
+- **Tests for every fix.** A defect that was fixed gets a test that fails without the fix.
 
+## Troubleshooting
+
+**The plugin does not show up in `mcode plugin list`.**
+Local plugins are enabled by presence in `~/.minimax/plugins/<name>/`. Check the directory exists
+and contains `.minimax-plugin/plugin.json`. Then re-run the install script.
+
+**A tool call fails with "Tool-result delivery seam is closed".**
+Something is returning a top-level `{"decision":"block"}` from a `PostToolUse` hook. That form is
+correct for the `Stop` hook and forbidden for `PostToolUse`, which must use
+`hookSpecificOutput` with `additionalContext` instead.
+
+**A rate limit still gives up after about half a minute.**
+The session was started before the bundle patch. Node loads the bundle into memory at startup.
+Run `node scripts/apply-mcode-llm-retry-policy.mjs --check` — it lists the sessions that are still
+running the old code — and restart them.
+
+**`rm` fails with "bad interpreter" in agent bash.**
+The recoverable-delete shim was generated for a system with `/bin/bash`. Run
+`node scripts/apply-mcode-rm-shim-fix.mjs`.
+
+**The retry hook does not seem to fire.**
+Its data directory is `~/.minimax/v2/plugin-data/hooks/mcode-retry-on-error/` — *not* a
+`.plugin-data` folder next to the plugin. Set `"debug": true` in that directory's `config.json` and
+the heartbeat log next to it will show every invocation.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). The short version: keep it dependency-free, generate the
+manifests, sync the shared modules, and add a test for anything you fix.
+
+## Licence
+
+AGPL-3.0-or-later. See [LICENSE](LICENSE).
