@@ -15,7 +15,8 @@ there.
 | `mcode-codex/` | ChatGPT subscription (Codex) image generation and editing, using the credential pi already holds. |
 | `mcode-retry-on-error/` | Continue a turn that ended in an error or a rate-limited tool call, with backoff. |
 | `scripts/apply-mcode-rm-shim-fix.mjs` | Repairs a broken recoverable-delete shim in `@minimax-ai/code` 0.6.12. See [Runtime repair](#runtime-repair). |
-| `shared/` | The retry core and the MCP stdio server, copied into each plugin that uses them. |
+| `scripts/apply-mcode-llm-retry-policy.mjs` | Raises the provider retry budget from 5 to 15. See [Runtime repair](#runtime-repair-the-provider-retry-budget). |
+| `shared/` | The retry core, the MCP stdio server and the workspace resolver, copied into each plugin that uses them. |
 
 ## Install
 
@@ -130,6 +131,50 @@ node scripts/apply-mcode-rm-shim-fix.mjs --check   # report only, no writes
 
 `mcode update` replaces the bundle wholesale, so re-run the script afterwards. The script is
 idempotent and safe to run at any time.
+
+## Runtime repair: the provider retry budget
+
+MiniMax Code retries a rate-limited provider request itself, but the budget is a hardcoded
+constant in the bundle:
+
+```js
+{maxRetries: 5, baseDelayMs: 1000, maxDelayMs: 30000, maxRetryElapsedMs: 120000}
+```
+
+Five retries means six attempts over about twenty seconds of waiting, then the turn dies. There is
+no way to configure it: the policy is merged in by `Gpn(t.policy)`, but `t.policy` never arrives —
+the only caller that supplies `resolveLlmRetry` hands back an observer and nothing else, and there
+is no config key or environment variable for it anywhere in the bundle.
+
+`scripts/apply-mcode-llm-retry-policy.mjs` patches the constant to the same policy the image
+plugins use:
+
+```js
+{maxRetries: 15, baseDelayMs: 1500, maxDelayMs: 30000, maxRetryElapsedMs: 900000}
+```
+
+Sixteen attempts over roughly five and a half minutes, each a little later than the last, with a
+fifteen minute ceiling in case a server asks for a long `Retry-After`.
+
+```bash
+node scripts/apply-mcode-llm-retry-policy.mjs           # patch it
+node scripts/apply-mcode-llm-retry-policy.mjs --check   # report only, no writes
+node scripts/apply-mcode-llm-retry-policy.mjs --revert  # back to MiniMax Code's default
+```
+
+Measured against a local endpoint that always answers 429:
+
+| Policy | Attempts | Gaps between attempts | Wall clock |
+| --- | --- | --- | --- |
+| Stock | 6 | 1s, 2s, 4s, 8s, 16s | ~20s |
+| Patched | 16 | 1.5s, 3s, 6s, 12s, 24s, 30s (capped) | ~5.5min |
+
+The original chunk is kept as `<chunk>.orig.bak` beside it, and the script refuses to overwrite a
+policy it does not recognise. `mcode update` replaces the bundle wholesale, so re-run the script
+afterwards — the same caveat as the shim fix.
+
+This is a policy change to a third-party install, not a bug fix. It is the only lever that exists:
+the provider error never reaches a plugin hook, so no plugin can add retries at that layer.
 
 ## Known gap: none outstanding
 
