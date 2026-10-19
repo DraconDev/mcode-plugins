@@ -94,10 +94,27 @@ function findPolicy(source) {
   const keyPattern = /maxRetries\s*:\s*(\d+)/g;
   let match;
   while ((match = keyPattern.exec(source)) !== null) {
-    // Walk forward to the end of the object literal.
+    // The object literal opens *before* the key, so walk back to it. The
+    // innermost enclosing brace is the one that holds the policy.
+    let start = -1;
     let depth = 0;
+    for (let i = match.index - 1; i >= 0; i -= 1) {
+      const ch = source[i];
+      if (ch === '}') depth += 1;
+      else if (ch === '{') {
+        if (depth === 0) {
+          start = i;
+          break;
+        }
+        depth -= 1;
+      }
+    }
+    if (start < 0) continue;
+
+    // Then walk forward to the matching close brace.
     let end = -1;
-    for (let i = source.indexOf('{', match.index); i < source.length; i += 1) {
+    depth = 0;
+    for (let i = start; i < source.length; i += 1) {
       const ch = source[i];
       if (ch === '{') depth += 1;
       else if (ch === '}') {
@@ -108,26 +125,18 @@ function findPolicy(source) {
         }
       }
     }
-    if (end < 0) break;
+    if (end < 0) continue;
 
-    const body = source.slice(source.indexOf('{', match.index), end + 1);
+    const body = source.slice(start, end + 1);
     if (!KEYS.every((key) => new RegExp(`${key}\\s*:`).test(body))) continue;
 
     const values = {};
     for (const key of KEYS) {
-      const found = body.match(new RegExp(`${key}\\s*:\\s*(\\d+)`));
-      if (!found) {
-        values[key] = null;
-        continue;
-      }
-      values[key] = Number(found[1]);
+      // The minifier writes small numbers in scientific notation: 1e3, 12e4.
+      const found = body.match(new RegExp(`${key}\\s*:\\s*(\\d+(?:e\\d+)?)`));
+      values[key] = found ? Number(found[1]) : null;
     }
-    results.push({
-      start: source.indexOf('{', match.index),
-      end: end + 1,
-      body,
-      values,
-    });
+    results.push({ start, end: end + 1, body, values });
   }
   return results;
 }
