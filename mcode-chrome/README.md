@@ -151,6 +151,14 @@ and brokers commands to the extension directly. Both paths are tested, and neith
 exist.
 
 
+## Paths
+
+`screenshot` (`path`) and `upload_file` (`paths`) take local paths. A relative path resolves
+against the **agent workspace** — the directory mcode was launched from — because MiniMax Code
+spawns plugin MCP servers with the home directory as their working directory and passes no
+workspace path in the environment. An absolute path is unambiguous and preferred; `baseDir`
+overrides the base directory for a relative path.
+
 ## Environment overrides
 
 | Variable | Effect |
@@ -161,6 +169,7 @@ exist.
 | `MCODE_CHROME_EXTENSION_PATH` | Path to the companion extension folder to report in `status`. |
 | `MCODE_CHROME_DATA_DIR` | Where the authorization state is persisted. |
 | `MCODE_SESSION_ID` | Stable session id; defaults to a hash of the workspace directory. |
+| `MCODE_WORKSPACE` | Overrides the workspace directory that relative paths resolve against. |
 
 ## Environment note: the `rm` shim in MiniMax Code 0.6.12
 
@@ -208,7 +217,10 @@ mcode-chrome/
 │   ├── tools.mjs                  tool definitions and handlers
 │   ├── format.mjs                 snapshot rendering, redaction
 │   ├── auth.mjs                   authorization gate
-│   └── session.mjs                session key and tab group
+│   ├── session.mjs                session key and tab group
+│   ├── mcp-server.mjs             shared MCP stdio server (generated copy)
+│   ├── retry.mjs                  shared retry core (generated copy)
+│   └── workspace.mjs              shared workspace resolver (generated copy)
 ├── skills/chrome-browser/SKILL.md agent workflow and safety rules
 └── scripts/                       manifest builder, tests, installer
 ```
