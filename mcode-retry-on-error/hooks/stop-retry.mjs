@@ -46,7 +46,16 @@
  *   MCODE_RETRY_DISABLED          set to 1 to turn the hook into a no-op
  */
 
-import { mkdirSync, openSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import {
+  closeSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -119,16 +128,19 @@ function readTailRecords(path) {
   }
   let raw;
   try {
+    // `openSync` returns a numeric descriptor; `readSync` is the module-level
+    // function that takes it.
     const fd = openSync(path, 'r');
     try {
       const length = Math.min(size, TAIL_BYTES);
       const buffer = Buffer.alloc(length);
-      fd.readSync(buffer, 0, length, size - length);
+      readSync(fd, buffer, 0, length, size - length);
       raw = buffer.toString('utf8');
     } finally {
-      fd.closeSync();
+      closeSync(fd);
     }
-  } catch {
+  } catch (error) {
+    trace('tail read failed:', error?.message ?? error);
     return [];
   }
   const lines = raw.split('\n');
