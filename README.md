@@ -163,6 +163,7 @@ backstop; the wall clock is what actually binds.
 node scripts/apply-mcode-llm-retry-policy.mjs           # patch it
 node scripts/apply-mcode-llm-retry-policy.mjs --check   # report only, no writes
 node scripts/apply-mcode-llm-retry-policy.mjs --revert  # back to MiniMax Code's default
+node scripts/verify-mcode-retry-classifier.mjs          # test the installed classifier
 ```
 
 Measured against a local endpoint that always answers 429:
@@ -184,20 +185,32 @@ the provider error never reaches a plugin hook, so no plugin can add retries at 
 The error in the screenshots is `Code: 50150`, which is `LLM_TPM_RATE_LIMITED` — a token-per-minute
 limit. The retry classifier treats it as **retryable**, so the budget above governs it.
 
-Two neighbouring codes are **not** retryable by anything, and no budget change affects them:
+Two neighbouring codes were hardcoded as **terminal**, which meant no retry, no backoff and an
+instant dead turn:
 
-| Code | Meaning | Retryable |
-| --- | --- | --- |
-| 50150 | `LLM_TPM_RATE_LIMITED` | yes |
-| 50111 | `LLM_RATE_LIMITED` | yes |
-| 50151 | `LLM_CLUSTER_OVERLOADED` | yes |
-| 42212 | `USAGE_LIMIT_EXCEEDED` | no — terminal |
-| 50110 | `LLM_CREDITS_EXHAUSTED` | no — terminal |
+| Code | Meaning | Before | Now |
+| --- | --- | --- | --- |
+| 50150 | `LLM_TPM_RATE_LIMITED` | retried | retried |
+| 50111 | `LLM_RATE_LIMITED` | retried | retried |
+| 50151 | `LLM_CLUSTER_OVERLOADED` | retried | retried |
+| 42212 | `USAGE_LIMIT_EXCEEDED` | **terminal** | retried |
+| 50110 | `LLM_CREDITS_EXHAUSTED` | **terminal** | retried |
+| 5xx | a server error | **terminal** | retried |
+| 50112 | `LLM_AUTH_ERROR` (401/403) | terminal | terminal |
+| — | a content filter, a refusal, a bad request, an explicit abort | terminal | terminal |
 
-A terminal `usage_limit` or `credits_exhausted` ends the turn immediately; the goal runtime then
-parks the session as `Usage limited — Resume after provider access recovers` and resumes it when
-the provider allows. That is the right behaviour for a quota that is genuinely gone, so it is left
-alone.
+A spent quota is the case that matters most here: it resets on a timer, and MiniMax Code was
+giving up on the first response instead of waiting for it. The same script patches the classifier
+so those codes take the retry path, and a plain 5xx with them — MiniMax Code retried 429 and 529
+but gave up on 500, 502 and 504, which is stranger still.
+
+An authentication failure stays terminal on purpose. A bad credential will not fix itself, and
+retrying it for six hours is pointless.
+
+`scripts/verify-mcode-retry-classifier.mjs` tests the classifier that is actually installed: it
+pulls the function out of the live bundle and runs it against realistic error facts. That is the
+only way to cover the managed provider path — MiniMax Code marks BYOK providers as "retry every
+error", so a custom provider never reaches the classifier at all.
 
 ## Known gap: none outstanding
 
