@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schemas/plugin-v1.schema.json",
+  "schemaVersion": 1,
+  "name": "mcode-agnes",
+  "displayName": "MCode Agnes",
+  "version": "1.0.0",
+  "description": "Generate images and video with Agnes AI from MiniMax Code, using the credential already stored for pi. Rate limits and transient failures are retried automatically.",
+  "author": "Dracon",
+  "icon": "icon.webp",
+  "category": "Productivity",
+  "exampleQueries": [
+    "Generate a painterly icon of a mossy stone lantern at 512x512.",
+    "Make a 10 second clip of drifting clouds with Agnes.",
+    "Generate an image and save it into the assets folder."
+  ],
+  "apps": [],
+  "mcpServers": [
+    "mcp/agnes.mcp.json"
+  ],
+  "skills": [
+    "skills/agnes-media/SKILL.md"
+  ],
+  "hostBindings": []
+}

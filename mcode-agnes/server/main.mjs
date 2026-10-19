@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+/**
+ * mcode-agnes — MCP stdio server.
+ *
+ * Exposes Agnes AI image and video generation to MiniMax Code, using the
+ * credential already in pi's auth store.
+ */
+
+import { createMcpServer } from './mcp-server.mjs';
+import { createTools } from './tools.mjs';
+
+const tools = createTools({
+  workspaceCwd: process.env.MCODE_WORKSPACE ?? process.cwd(),
+});
+
+const server = createMcpServer({
+  name: 'mcode-agnes',
+  version: '1.0.0',
+  tools,
+});
+
+await server.start();
+server.listen();
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => {
+    server.stop();
+    process.exit(0);
+  });
+}
