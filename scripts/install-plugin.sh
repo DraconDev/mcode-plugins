@@ -37,7 +37,7 @@ fi
 
 mkdir -p "$TARGET_DIR"
 # Copy the plugin payload, excluding developer-only scripts and local state.
-for item in .minimax-plugin mcp server skills hooks agents bindings icon.webp package.json README.md; do
+for item in .minimax-plugin .claude-plugin .codex-plugin mcp server skills hooks agents bindings icon.webp package.json README.md; do
   [ -e "$SOURCE_DIR/$item" ] && cp -R "$SOURCE_DIR/$item" "$TARGET_DIR/"
 done
 
