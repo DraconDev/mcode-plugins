@@ -83,7 +83,7 @@ if (!source) {
 
 const parts = {
   Ir: extractBinding(source, /var inn=\{[^}]*\},Ir=inn;/, 'the Ir enum'),
-  Ktn: extractBinding(source, /var Wtn=\[[^\]]*\],Ktn=new Set\(Wtn\);/, 'the Ktn set'),
+  Ktn: extractBinding(source, /Wtn=\[[^\]]*\],Ktn=new Set\(Wtn\)/, 'the Ktn set'),
   dO: extractFunction(source, 'dO'),
   pO: extractFunction(source, 'pO'),
   g_: extractFunction(source, 'g_'),
