@@ -175,6 +175,7 @@ const TOOL_DEFS = [
       lines.push(`- model: ${DEFAULT_MODEL} (the backend selects the image model)`);
       lines.push(`- output formats: ${OUTPUT_FORMATS.join(', ')}`);
       lines.push(`- reference images per call: up to ${MAX_EDIT_IMAGES}`);
+      lines.push(`- reference image size: up to ${MAX_INPUT_IMAGE_BYTES} bytes each`);
       lines.push(
         '- retry: 15 attempts, exponential backoff from 1.5s, each a little later; ' +
           '429/5xx/timeouts are retried, 4xx is not',
@@ -206,18 +207,21 @@ const TOOL_DEFS = [
           items: { type: 'string' },
           description:
             'Up to five local PNG/JPEG/WebP paths to edit from. Relative paths resolve ' +
-            'against the agent workspace; absolute paths are unambiguous and preferred.',
+            'against the agent workspace and have to stay inside it; absolute paths ' +
+            'are unambiguous and preferred.',
         },
         savePath: {
           type: 'string',
           description:
             'Where to write the image. A relative path resolves against the agent ' +
-            'workspace, but an absolute path (e.g. /home/you/project/hero.png) is ' +
-            'unambiguous and preferred.',
+            'workspace and has to stay inside it, but an absolute path ' +
+            '(e.g. /home/you/project/hero.png) is unambiguous and preferred.',
         },
         baseDir: {
           type: 'string',
-          description: 'Directory a relative savePath resolves against. Defaults to the agent workspace.',
+          description:
+            'Directory a relative path resolves against, inside the agent workspace. ' +
+            'Defaults to the agent workspace; it may not point outside it.',
         },
         maxRetries: { type: 'number', description: 'Override the retry count (default 15).' },
       },

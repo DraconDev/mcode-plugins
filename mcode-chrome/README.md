@@ -31,7 +31,10 @@ or closed by accident.
 ## Install
 
 ```bash
-bash scripts/install.sh
+# from a checkout of this repository
+scripts/install-plugin.sh mcode-chrome
+# or, from inside the plugin's own directory
+bash mcode-chrome/scripts/install.sh
 ```
 
 That copies the plugin to `~/.minimax/plugins/mcode-chrome` and registers it with the local
@@ -43,7 +46,13 @@ mcode plugin list
 
 The plugin needs `node` on `PATH` (the MCP server is launched as `node ./server/main.mjs`) and the
 `Pi Chrome Connector` extension loaded in the Chrome profile you want to drive. The extension ships
-with `pi-chrome`; this plugin deliberately does **not** bundle a copy, because a Chrome extension's
+with [`pi-chrome`](https://www.npmjs.com/package/pi-chrome) (MIT):
+
+```bash
+npm install -g pi-chrome
+```
+
+This plugin deliberately does **not** bundle a copy of the extension, because a Chrome extension's
 id is derived from the unpacked folder's path — a second copy would register as a second connector
 and race the first one for commands. If the extension is not loaded, `mcp__chrome__status` prints
 the exact folder to select at `chrome://extensions` → "Load unpacked".
