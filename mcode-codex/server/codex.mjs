@@ -62,7 +62,8 @@ export async function refreshAccessToken(refreshToken) {
   const payload = await response.json().catch(() => null);
   if (!response.ok || typeof payload?.access_token !== 'string') {
     throw new Error(
-      'Could not refresh the ChatGPT image credential. Sign in again for the image provider in pi.',
+      'Could not refresh the ChatGPT image credential. Sign in again for the image ' +
+        'provider, or set a fresh CODEX_IMAGE_ACCESS_TOKEN.',
     );
   }
   return {

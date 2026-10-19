@@ -2,8 +2,9 @@
 /**
  * mcode-codex — MCP stdio server.
  *
- * Exposes ChatGPT subscription image generation to MiniMax Code, using the
- * OAuth credential already stored for pi.
+ * Exposes ChatGPT subscription image generation to MiniMax Code. The
+ * credential comes from CODEX_IMAGE_ACCESS_TOKEN, or from pi's auth store if
+ * you already sign in to the image provider there.
  */
 
 import { createHash } from 'node:crypto';

@@ -2,8 +2,9 @@
 /**
  * mcode-agnes — MCP stdio server.
  *
- * Exposes Agnes AI image and video generation to MiniMax Code, using the
- * credential already in pi's auth store.
+ * Exposes Agnes AI image and video generation to MiniMax Code. The API key
+ * comes from AGNES_API_KEY or AGNES_CN_API_KEY, or from pi's auth store if you
+ * already sign in to Agnes there.
  */
 
 import { createMcpServer } from './mcp-server.mjs';
