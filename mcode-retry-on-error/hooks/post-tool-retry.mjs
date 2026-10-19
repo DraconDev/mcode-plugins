@@ -146,7 +146,7 @@ async function main() {
         join(DATA_DIR, 'post-tool-heartbeat.log'),
         `${new Date().toISOString()} tool=${payload.tool_name ?? '-'} ` +
           `is_error=${payload.is_error ?? '-'} ` +
-          `response=${JSON.stringify(textOf(payload.tool_response).slice(-300))}\n`,
+          `response=${JSON.stringify(textOf(payload.tool_response).slice(0, 300))}\n`,
         'utf8',
       );
     } catch {
@@ -162,20 +162,34 @@ async function main() {
   const failed = payload.is_error === undefined ? undefined : payload.is_error === true;
   const isPlainText = typeof response === 'string';
 
-  if (!isRetryableFailure({ text, failed, isPlainText })) return;
-
   const file = stateFile(payload.session_id);
-  const attempts = loadAttempts(file) + 1;
-  try {
-    mkdirSync(DATA_DIR, { recursive: true });
-    const { writeFileSync } = await import('node:fs');
-    writeFileSync(file, JSON.stringify({ attempts }), 'utf8');
-  } catch {
-    // Not fatal — the attempt counter is only for the message.
+
+  if (!isRetryableFailure({ text, failed, isPlainText })) {
+    // The call did not fail transiently, so the failure the counter tracks
+    // is over and the next one starts from attempt 1.
+    resetAttempts(file);
+    return;
   }
 
-  const delay = Number(process.env.MCODE_RETRY_DELAY_MS ?? CONFIG.delayMs ?? 0);
-  if (Number.isFinite(delay) && delay > 0) await sleep(delay);
+  const attempts = loadAttempts(file) + 1;
+  saveAttempts(file, attempts);
+
+  // The runtime kills this hook at its 10s timeout, so the delay has to
+  // leave room for the output to be written. A delay that runs past the
+  // budget is killed before the first byte of stdout and the failure is
+  // lost silently, so the delay is clamped and the clamped value is the one
+  // that is actually slept.
+  const wantedDelay = Number(process.env.MCODE_RETRY_DELAY_MS ?? CONFIG.delayMs ?? 0);
+  const delay = Number.isFinite(wantedDelay)
+    ? Math.min(Math.max(wantedDelay, 0), HOOK_TIMEOUT_BUDGET_MS)
+    : 0;
+  if (wantedDelay > delay) {
+    process.stderr.write(
+      `[mcode-retry-on-error] delay ${wantedDelay}ms clamped to ${delay}ms ` +
+        `(hook budget ${HOOK_TIMEOUT_BUDGET_MS}ms)\n`,
+    );
+  }
+  if (delay > 0) await sleep(delay);
 
   process.stdout.write(
     `${JSON.stringify({
@@ -183,7 +197,9 @@ async function main() {
         hookEventName: 'PostToolUse',
         additionalContext: retryInstruction({
           toolName,
-          detail: text.slice(-300) || 'transient error',
+          // The cause of a failure is at the start of the response; the tail
+          // is usually the command's own output.
+          detail: failureDetail(text, 300) || 'transient error',
           attempt: attempts,
         }),
       },
