@@ -59,14 +59,15 @@ tried to end in an error.
 **Provider rate limits are not reachable by any plugin, and mcode already handles them.** The
 `The model provider is rate limiting requests. Code: 50150` error never reaches the session
 transcript, and the `Stop` hook never fires for it — the run aborts before a turn completes.
-MiniMax Code retries that layer itself (5 attempts over 2 minutes, shown as
-`Retrying model request · 3/5`), then points at `/retry`, and the goal runtime parks the session
-as `Usage limited — Resume after provider access recovers`.
 
 Measured: across 7,185 assistant messages in a day's transcripts, the `stopReason` is only ever
 `toolUse` or `stop` — never `error` — and the provider error string appears in no transcript at
 all. Forcing a provider failure with an unreachable endpoint confirmed it: the run failed and the
 hook never ran.
+
+mcode's own retry of that layer had a hardcoded budget of five. It is raised to fifteen by
+`scripts/apply-mcode-llm-retry-policy.mjs` — see
+[Runtime repair](#runtime-repair-the-provider-retry-budget).
 
 ## Credentials
 
