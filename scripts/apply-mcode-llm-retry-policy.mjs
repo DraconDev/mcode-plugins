@@ -136,6 +136,97 @@ const QUOTA_REPLACEMENT =
 const checkOnly = process.argv.includes('--check');
 const revert = process.argv.includes('--revert');
 
+/**
+ * Does this command line belong to a MiniMax Code process?
+ *
+ * The launcher renames its own argv, so an mcode process shows up as
+ * `minimax-code` with no further arguments. Anything that mentions the
+ * package directory is an mcode process too.
+ */
+function isMcodeProcess(args) {
+  const trimmed = args.trim();
+  if (!trimmed) return false;
+  const first = trimmed.split(/\s+/)[0];
+  if (first === 'minimax-code' || first.endsWith('/minimax-code')) return true;
+  return trimmed.includes('@minimax-ai/code');
+}
+
+/**
+ * List the running MiniMax Code processes with their start time.
+ *
+ * `ps` is used rather than a scan of /proc so this also works on macOS.
+ * `lstart` is the one start-time format both agree on; `etimes` is Linux-only
+ * and `etime` formats its value differently per platform.
+ */
+function findMcodeProcesses() {
+  let output;
+  try {
+    output = execFileSync('ps', ['-eo', 'pid=,lstart=,args='], { encoding: 'utf8' });
+  } catch {
+    return [];
+  }
+  const processes = [];
+  for (const line of output.split('\n')) {
+    const match = line.match(
+      /^\s*(\d+)\s+(\w{3}\s+\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(.*)$/,
+    );
+    if (!match) continue;
+    const [, pid, lstart, args] = match;
+    if (!isMcodeProcess(args)) continue;
+    const startedAt = Date.parse(lstart);
+    if (Number.isNaN(startedAt)) continue;
+    processes.push({ pid: Number(pid), startedAt, args: args.trim() });
+  }
+  return processes;
+}
+
+/**
+ * The mcode processes that are still running pre-patch code.
+ *
+ * Node reads the bundle into memory when a process starts, so a patch on disk
+ * only reaches processes started afterwards. A session that was already open
+ * when the patch landed keeps the old retry budget until it is restarted, and
+ * the symptom is confusing: the code on disk promises six hours of retries
+ * while the session in front of you still gives up after about half a minute.
+ *
+ * A process is stale when it started before the chunk was last written.
+ */
+function findStaleMcodeProcesses(chunkPath) {
+  let chunkMtime;
+  try {
+    chunkMtime = statSync(chunkPath).mtimeMs;
+  } catch {
+    return [];
+  }
+  return findMcodeProcesses().filter((process) => process.startedAt < chunkMtime);
+}
+
+/**
+ * Tell the user about mcode processes that will not pick the patch up.
+ */
+function warnAboutStaleMcode(chunkPath) {
+  const stale = findStaleMcodeProcesses(chunkPath);
+  if (stale.length === 0) return;
+
+  const count = stale.length;
+  const oldest = stale.reduce((min, p) => Math.min(min, p.startedAt), stale[0].startedAt);
+  const age = Math.max(0, Math.round((Date.now() - oldest) / 60000));
+
+  console.log('');
+  console.log(
+    `WARNING: ${count} mcode process${count === 1 ? '' : 'es'} ${count === 1 ? 'is' : 'are'} still running the old code.`,
+  );
+  for (const process of stale) {
+    const started = new Date(process.startedAt).toISOString().replace('T', ' ').slice(0, 19);
+    console.log(`  PID ${process.pid}  started ${started}`);
+  }
+  console.log(
+    `  The oldest has been up for ${age} minute${age === 1 ? '' : 's'}.`,
+  );
+  console.log('  They keep the old budget — 5 retries, about half a minute — until restarted.');
+  console.log('  Quit those sessions and start mcode again to pick up the new policy.');
+}
+
 /** Where mcode may be installed. */
 const PACKAGE_ROOTS = [
   process.env.MCODE_PACKAGE_ROOT,
@@ -278,6 +369,7 @@ if (checkOnly) {
       : 'BAD a spent quota (42212) and exhausted credits (50110) are still terminal',
   );
   console.log(`    ${found.path}`);
+  if (isPatched && guardPatched) warnAboutStaleMcode(found.path);
   process.exit(isPatched && guardPatched ? 0 : 1);
 }
 
@@ -302,6 +394,7 @@ if (revert) {
   } else {
     console.log('already at MiniMax Code\'s defaults');
   }
+  warnAboutStaleMcode(found.path);
   process.exit(0);
 }
 
