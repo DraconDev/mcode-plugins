@@ -66,12 +66,23 @@ back to pi's auth file, so it cannot corrupt another tool's state.
 
 ```bash
 node scripts/retry-test.mjs                        # the retry policy
+node scripts/workspace-test.mjs                    # the workspace directory resolver
 node scripts/sync-shared.mjs --check               # shared modules in sync
 node mcode-chrome/scripts/server-mode-test.mjs     # standalone protocol round trip
 node mcode-chrome/scripts/smoke-test.mjs           # MCP handshake against the live bridge
 node mcode-agnes/scripts/smoke-test.mjs            # status only, no credits spent
 node mcode-agnes/scripts/smoke-test.mjs --generate # also generate one real image
+node mcode-codex/scripts/smoke-test.mjs            # status only, no credits spent
+node mcode-codex/scripts/smoke-test.mjs --generate # also generate one real image
 node mcode-retry-on-error/scripts/hook-test.mjs    # the turn-level retry decisions
+```
+
+Regenerate the plugin manifests after changing any tool definition:
+
+```bash
+node mcode-agnes/scripts/build-manifest.mjs
+node mcode-codex/scripts/build-manifest.mjs
+node mcode-chrome/scripts/build-manifest.mjs
 ```
 
 ## Runtime repair

@@ -41,20 +41,20 @@ a rate limit here does not block the other.
 Ported from `pi-codex-image-gen` (npm). The request shape, headers and streaming protocol match
 the pi extension's, so the same account, quota and behaviour apply in both agents.
 
+## Paths
+
+`savePath` and `referenceImages` take local paths. A relative path resolves against the **agent
+workspace** — the directory mcode was launched from — because MiniMax Code spawns plugin MCP
+servers with the home directory as their working directory and passes no workspace path in the
+environment. An absolute path is unambiguous and preferred; `baseDir` overrides the base directory
+for a relative path.
+
 ## Test
 
 ```bash
-# status only, no credits spent
-node -e '
-import("node:child_process").then(async ({ spawn }) => {
-  const c = spawn(process.execPath, ["./server/main.mjs"], { stdio: ["pipe","pipe","inherit"] });
-  c.stdout.on("data", (d) => process.stdout.write(d));
-  c.stdin.write(JSON.stringify({ jsonrpc:"2.0", id:1, method:"initialize",
-    params:{ protocolVersion:"2025-06-18", capabilities:{}, clientInfo:{name:"t",version:"1"} } }) + "\n");
-  setTimeout(() => { c.stdin.write(JSON.stringify({ jsonrpc:"2.0", id:2, method:"tools/call",
-    params:{ name:"status", arguments:{} } }) + "\n"); }, 300);
-  setTimeout(() => { c.kill(); process.exit(0); }, 2500);
-});'
+node scripts/smoke-test.mjs            # status only, no credits spent
+node scripts/smoke-test.mjs --generate # also generate one real image
+node scripts/build-manifest.mjs        # regenerate mcp/codex.mcp.json from server/tools.mjs
 ```
 
 ## Licence
