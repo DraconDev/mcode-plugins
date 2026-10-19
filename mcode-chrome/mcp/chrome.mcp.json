@@ -687,7 +687,7 @@
             "properties": {
               "path": {
                 "type": "string",
-                "description": "Optional path to also write the image to. Use an ABSOLUTE path: the plugin server runs with the home directory as its working directory, not your workspace, so a relative path would land in the wrong place."
+                "description": "Optional path to also write the image to. A relative path resolves against the agent workspace; an absolute path is unambiguous and preferred."
               },
               "format": {
                 "type": "string",
@@ -725,7 +725,7 @@
               },
               "baseDir": {
                 "type": "string",
-                "description": "Directory relative paths resolve against. Defaults to the server working directory (the home directory) — prefer absolute paths."
+                "description": "Directory relative paths resolve against. Defaults to the agent workspace (the directory mcode was launched from)."
               }
             },
             "additionalProperties": false
@@ -928,7 +928,7 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Local file paths to upload. Use ABSOLUTE paths: the plugin server runs with the home directory as its working directory, not your workspace, so a relative path would resolve against the wrong place."
+                "description": "Local file paths to upload. Relative paths resolve against the agent workspace; absolute paths are unambiguous and preferred."
               },
               "targetId": {
                 "type": "string",
@@ -949,7 +949,7 @@
               },
               "baseDir": {
                 "type": "string",
-                "description": "Directory relative paths resolve against. Defaults to the server working directory (the home directory) — prefer absolute paths."
+                "description": "Directory relative paths resolve against. Defaults to the agent workspace (the directory mcode was launched from)."
               }
             },
             "required": [

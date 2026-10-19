@@ -26,10 +26,17 @@
           "inputSchema": {
             "type": "object",
             "properties": {
-              "prompt": { "type": "string", "description": "What the image should show." },
+              "prompt": {
+                "type": "string",
+                "description": "What the image should show."
+              },
               "outputFormat": {
                 "type": "string",
-                "enum": ["png", "jpeg", "webp"],
+                "enum": [
+                  "png",
+                  "jpeg",
+                  "webp"
+                ],
                 "description": "Image format.",
                 "default": "png"
               },
@@ -39,16 +46,27 @@
               },
               "referenceImages": {
                 "type": "array",
-                "items": { "type": "string" },
-                "description": "Up to five local PNG/JPEG/WebP paths to edit from. Use absolute paths: the plugin server runs with the home directory as its working directory."
+                "items": {
+                  "type": "string"
+                },
+                "description": "Up to five local PNG/JPEG/WebP paths to edit from. Relative paths resolve against the agent workspace; absolute paths are unambiguous and preferred."
               },
               "savePath": {
                 "type": "string",
-                "description": "Where to write the image. Use an ABSOLUTE path: the plugin server runs with the home directory as its working directory, not your workspace."
+                "description": "Where to write the image. A relative path resolves against the agent workspace, but an absolute path (e.g. /home/you/project/hero.png) is unambiguous and preferred."
               },
-              "maxRetries": { "type": "number", "description": "Override the retry count (default 15)." }
+              "baseDir": {
+                "type": "string",
+                "description": "Directory a relative savePath resolves against. Defaults to the agent workspace."
+              },
+              "maxRetries": {
+                "type": "number",
+                "description": "Override the retry count (default 15)."
+              }
             },
-            "required": ["prompt"],
+            "required": [
+              "prompt"
+            ],
             "additionalProperties": false
           }
         }
