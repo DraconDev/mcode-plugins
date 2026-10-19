@@ -183,9 +183,15 @@ var qur = `#!/usr/bin/env bash
 ```
 
 The app re-seeds the shim whenever the on-disk content differs from the template, so the fix
-applies from the next session start. The original chunk is preserved at
-`chunk-5ADYFF2U.js.orig.bak` in this plugin directory. Re-apply the same one-line change after
-`mcode update` if the shim starts failing again.
+applies from the next session start.
+
+Rather than committing a 6 MB stale copy of the bundle, the repo ships an idempotent repair
+script — run it after `mcode update` if the shim starts failing again:
+
+```bash
+node scripts/apply-mcode-rm-shim-fix.mjs           # patch and re-seed
+node scripts/apply-mcode-rm-shim-fix.mjs --check   # report only
+```
 
 This plugin does not depend on the fix — `scripts/install.sh` removes the old plugin copy with
 node rather than `rm`, so it works either way.
@@ -209,5 +215,6 @@ mcode-chrome/
 
 ## License
 
-MIT. The wire protocol and the companion extension come from
-[pi-chrome](https://github.com/tianrendong/pi-chrome) (MIT).
+AGPL-3.0-or-later, matching this repository. The wire protocol and the companion extension come
+from [pi-chrome](https://github.com/tianrendong/pi-chrome) (MIT); the MIT-licensed protocol is
+reimplemented here rather than vendored.

@@ -123,3 +123,6 @@ web/games/wip/football-forever/docs/audit/
 !rustfmt.toml
 !state/events/*.jsonl
 # --- END DRACON MANAGED BLOCK ---
+
+# mcode-chrome: stale vendor bundle backups (see scripts/apply-mcode-rm-shim-fix.mjs)
+*.orig.bak

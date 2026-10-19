@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "MiniMax Code plugin: drive the user's real, signed-in Chrome through the Pi Chrome Connector companion extension.",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "build:manifest": "node scripts/build-manifest.mjs",
     "test": "node scripts/server-mode-test.mjs && node scripts/smoke-test.mjs",
