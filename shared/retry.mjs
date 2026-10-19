@@ -133,10 +133,10 @@ const sleep = (ms, signal, cause) =>
 /**
  * Run `fn` with retries.
  *
- * The default policy is deliberately eager: 15 retries, each a little later
- * than the last, so a transient rate limit clears on its own instead of the
- * user having to re-run the prompt. Roughly fifteen attempts spread across
- * two to three minutes.
+ * The default policy is deliberately eager: 15 retries after the first
+ * attempt — 16 calls in total — each a little later than the last, so a
+ * transient rate limit clears on its own instead of the user having to re-run
+ * the prompt. Roughly two to three minutes.
  *
  * @param {(context: { attempt: number, signal?: AbortSignal }) => Promise<any>} fn
  * @param {object} [options]
@@ -166,18 +166,28 @@ export async function withRetry(fn, options = {}) {
 
   const startedAt = Date.now();
   let attempt = 0;
+  let lastError = null;
 
   for (;;) {
+    // The budget is checked before every attempt, not only after a failure,
+    // so a call can never start one attempt past its own deadline.
+    if (attempt > 0 && Date.now() - startedAt > maxDurationMs) throw lastError;
+
     attempt += 1;
     try {
       return await fn({ attempt, signal });
     } catch (error) {
+      lastError = error;
       if (signal?.aborted) throw error;
       if (!isRetryableError(error)) throw error;
       if (attempt > maxRetries) throw error;
-      if (Date.now() - startedAt > maxDurationMs) throw error;
 
-      const retryAfter = error instanceof HttpError ? parseRetryAfter(error.headers) : null;
+      // How much of the budget is left. The delay is clamped to it below, so
+      // a long `Retry-After` cannot push the call past its own deadline.
+      const remaining = maxDurationMs - (Date.now() - startedAt);
+      if (remaining <= 0) throw error;
+
+      const retryAfter = retryAfterOf(error);
       // A server that names a delay gets it honoured — but not beyond the
       // explicit ceiling, so a broken `Retry-After: 86400` cannot wedge a call.
       const delay = retryAfter !== null
@@ -186,9 +196,10 @@ export async function withRetry(fn, options = {}) {
       const jittered = jitter && retryAfter === null
         ? Math.round(delay * (0.85 + Math.random() * 0.3))
         : delay;
+      const bounded = Math.max(0, Math.min(jittered, remaining));
 
-      onRetry?.({ attempt, delayMs: jittered, error });
-      await sleep(jittered, signal);
+      onRetry?.({ attempt, delayMs: bounded, error });
+      await sleep(bounded, signal, error);
     }
   }
 }
