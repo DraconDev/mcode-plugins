@@ -239,6 +239,29 @@ try {
     respond = null;
   }
 
+  // 7b. A challenge that arrives with a retryable status is not retried
+  //     either — the intent is the challenge, not the status.
+  {
+    requests.length = 0;
+    respond = () =>
+      new Response('{}', {
+        status: 503,
+        headers: { 'cf-mitigated': 'challenge' },
+      });
+    const result = await generateImage.handler({
+      prompt: 'a stone',
+      maxRetries: 1,
+      baseDelayMs: 1,
+    });
+    check(
+      'a challenge with a retryable status is not retried',
+      requests.length === 1,
+      `${requests.length} request(s)`,
+    );
+    check('the challenge is reported', /Cloudflare/.test(textOf(result)), textOf(result));
+    respond = null;
+  }
+
   // 8. A 408 is still retried — the challenge flag must not silence the
   //    shared policy.
   {

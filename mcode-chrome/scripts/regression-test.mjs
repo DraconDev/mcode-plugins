@@ -25,15 +25,28 @@ process.env.MCODE_CHROME_DATA_DIR = await mkdtemp(join(tmpdir(), 'mcode-chrome-a
 
 const { formatSnapshot, redact } = await import('../server/format.mjs');
 const { createTools } = await import('../server/tools.mjs');
+const { ChromeBridge } = await import('../server/bridge.mjs');
 
 const here = dirname(fileURLToPath(import.meta.url));
 const serverPath = resolve(here, '..', 'server', 'main.mjs');
+const bridgeModulePath = resolve(here, '..', 'server', 'bridge.mjs');
 
 const results = [];
 const check = (label, ok, detail = '') => {
   results.push({ label, ok });
   process.stdout.write(`${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? ` — ${detail}` : ''}\n`);
 };
+
+/** An unused loopback port, so the tests never fight a live session. */
+function freePort() {
+  return new Promise((resolvePort) => {
+    const probe = createServer();
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address();
+      probe.close(() => resolvePort(port));
+    });
+  });
+}
 
 // ---------------------------------------------------------------------------
 // 1. Secret redaction: the three header shapes the extension returns.
@@ -237,18 +250,67 @@ check(
 );
 
 // ---------------------------------------------------------------------------
-// 6. A malformed stdin message must not kill the MCP server.
+// 6. Wire level: the params must survive the bridge's JSON round trip.
 // ---------------------------------------------------------------------------
 
-function freePort() {
-  return new Promise((resolvePort) => {
-    const probe = createServer();
-    probe.listen(0, '127.0.0.1', () => {
-      const { port } = probe.address();
-      probe.close(() => resolvePort(port));
-    });
-  });
-}
+const wirePort = await freePort();
+const wireUrl = `http://127.0.0.1:${wirePort}`;
+const wireBridge = new ChromeBridge({ port: wirePort, url: wireUrl });
+await wireBridge.start();
+
+const received = [];
+let companionRunning = true;
+const companion = (async () => {
+  while (companionRunning) {
+    try {
+      const response = await fetch(`${wireUrl}/next?name=MockConnector`);
+      const payload = await response.json();
+      if (payload.type === 'command') {
+        received.push(payload.command);
+        await fetch(`${wireUrl}/result`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: payload.command.id, ok: true, result: { ok: true } }),
+        });
+      }
+    } catch {
+      // The bridge went away; the loop ends with `companionRunning`.
+    }
+  }
+})();
+
+const wireTools = createTools({
+  bridge: wireBridge,
+  session,
+  extensionPath: '/tmp/extension',
+  workspaceCwd: tmpdir(),
+});
+const wireByName = new Map(wireTools.map((tool) => [tool.name, tool]));
+
+await wireByName.get('tab').handler({ action: 'new', url: 'https://example.com' });
+await wireByName.get('wait_for').handler({ kind: 'selector', value: '#ready' });
+await new Promise((resolveWait) => setTimeout(resolveWait, 200));
+
+const wireTab = received.find((command) => command.action === 'tab.new');
+const wireWait = received.find((command) => command.action === 'page.waitFor');
+check(
+  'the tab group title reaches the wire',
+  wireTab?.params?.groupTitle === session.groupTitle,
+  JSON.stringify(wireTab?.params ?? null),
+);
+check(
+  'the session group title reaches the wire for wait_for',
+  wireWait?.params?.sessionGroupTitle === session.groupTitle,
+  JSON.stringify(wireWait?.params ?? null),
+);
+
+companionRunning = false;
+wireBridge.stop();
+await companion;
+
+// ---------------------------------------------------------------------------
+// 7. A malformed stdin message must not kill the MCP server.
+// ---------------------------------------------------------------------------
 
 const port = await freePort();
 const child = spawn(process.execPath, [serverPath], {

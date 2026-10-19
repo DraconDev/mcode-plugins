@@ -66,11 +66,11 @@
               },
               "savePath": {
                 "type": "string",
-                "description": "Where to write the image. A relative path resolves against the agent workspace, but an absolute path (e.g. /home/you/project/hero.png) is unambiguous and preferred."
+                "description": "Where to write the image. A relative path resolves against the agent workspace and has to stay inside it, but an absolute path (e.g. /home/you/project/hero.png) is unambiguous and preferred."
               },
               "baseDir": {
                 "type": "string",
-                "description": "Directory a relative savePath resolves against. Defaults to the agent workspace."
+                "description": "Directory a relative path resolves against, inside the agent workspace. Defaults to the agent workspace; it may not point outside it."
               },
               "maxRetries": {
                 "type": "number",
@@ -129,11 +129,11 @@
               },
               "savePath": {
                 "type": "string",
-                "description": "Where to download the video. A relative path resolves against the agent workspace, but an absolute path (e.g. /home/you/project/clip.mp4) is unambiguous and preferred."
+                "description": "Where to download the video. A relative path resolves against the agent workspace and has to stay inside it, but an absolute path (e.g. /home/you/project/clip.mp4) is unambiguous and preferred."
               },
               "baseDir": {
                 "type": "string",
-                "description": "Directory a relative savePath resolves against. Defaults to the agent workspace."
+                "description": "Directory a relative path resolves against, inside the agent workspace. Defaults to the agent workspace; it may not point outside it."
               },
               "maxRetries": {
                 "type": "number",

@@ -49,15 +49,15 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Up to five local PNG/JPEG/WebP paths to edit from. Relative paths resolve against the agent workspace; absolute paths are unambiguous and preferred."
+                "description": "Up to five local PNG/JPEG/WebP paths to edit from. Relative paths resolve against the agent workspace and have to stay inside it; absolute paths are unambiguous and preferred."
               },
               "savePath": {
                 "type": "string",
-                "description": "Where to write the image. A relative path resolves against the agent workspace, but an absolute path (e.g. /home/you/project/hero.png) is unambiguous and preferred."
+                "description": "Where to write the image. A relative path resolves against the agent workspace and has to stay inside it, but an absolute path (e.g. /home/you/project/hero.png) is unambiguous and preferred."
               },
               "baseDir": {
                 "type": "string",
-                "description": "Directory a relative savePath resolves against. Defaults to the agent workspace."
+                "description": "Directory a relative path resolves against, inside the agent workspace. Defaults to the agent workspace; it may not point outside it."
               },
               "maxRetries": {
                 "type": "number",
