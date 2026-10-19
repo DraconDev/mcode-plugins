@@ -57,6 +57,18 @@
  * reverted by `mcode update`, so re-run this script afterwards. The original
  * chunk is kept alongside as `<chunk>.orig.bak`.
  *
+ * 3. The restart warning
+ * ----------------------
+ * Node reads the bundle into memory when a process starts, so a patch on disk
+ * only reaches processes started afterwards. A session that was already open
+ * when the patch landed keeps the old budget — five retries, about half a
+ * minute — until it is restarted, and the symptom is confusing: the code on
+ * disk promises six hours of retries while the session in front of you still
+ * gives up immediately.
+ *
+ * So the script looks for mcode processes that started before the chunk was
+ * written and prints them. The same check runs in `--check` mode.
+ *
  *   node scripts/apply-mcode-llm-retry-policy.mjs [--check] [--revert]
  */
 
