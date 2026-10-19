@@ -1,0 +1,16 @@
+{
+  "name": "mcode-chrome",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MiniMax Code plugin: drive the user's real, signed-in Chrome through the Pi Chrome Connector companion extension.",
+  "license": "MIT",
+  "scripts": {
+    "build:manifest": "node scripts/build-manifest.mjs",
+    "test": "node scripts/server-mode-test.mjs && node scripts/smoke-test.mjs",
+    "test:server": "node scripts/server-mode-test.mjs",
+    "test:smoke": "node scripts/smoke-test.mjs",
+    "test:e2e": "node scripts/e2e-test.mjs",
+    "install:plugin": "bash scripts/install.sh"
+  }
+}

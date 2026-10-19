@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schemas/plugin-v1.schema.json",
+  "schemaVersion": 1,
+  "name": "mcode-chrome",
+  "displayName": "MCode Chrome",
+  "version": "1.0.0",
+  "description": "Drive the user's real, signed-in Chrome from MiniMax Code through the Pi Chrome Connector companion extension — real logins, real tabs, no separate automation browser.",
+  "author": "Dracon",
+  "icon": "icon.webp",
+  "category": "Productivity",
+  "exampleQueries": [
+    "Open my dashboard in Chrome and tell me what is on the page.",
+    "Find the merge button on this page and click it.",
+    "Screenshot the current tab in my browser and describe what you see.",
+    "Check the console and network errors on the page I have open."
+  ],
+  "apps": [],
+  "mcpServers": [
+    "mcp/chrome.mcp.json"
+  ],
+  "skills": [
+    "skills/chrome-browser/SKILL.md"
+  ],
+  "hostBindings": []
+}
