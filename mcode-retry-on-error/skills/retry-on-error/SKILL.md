@@ -20,13 +20,21 @@ You do not have to do anything special for this to happen. It is automatic.
 
 - **Transient tool failures.** A tool result that reports a failure whose text matches a rate
   limit, quota, timeout, 5xx, or network pattern. A 429 from an image API is the common case.
-- **Turn errors.** The turn ended with `stopReason: "error"`.
+- **Turn errors.** The turn ended with `stopReason: "error"` *and* the error text looks transient.
 
 ## What is never retried
 
 - **An aborted turn.** The user cancelled; that is a decision, not a failure.
 - **A fatal tool error.** `ENOENT`, a bad argument, a validation failure — retrying would fail
   the same way. Only transient-looking failures are retried.
+- **A call the host refused.** A validation error (`Validation failed for tool …`) or a permission
+  error (`Permission denied for …`) is decided by the host, not by the operation, and the payload
+  it carries can contain anything — the user's own summary text, a quota policy, a timeout field
+  name. An identical retry is refused the same way.
+- **A permanent turn error.** A rejected credential or a content-filter refusal does not fix
+  itself.
+- **A turn the model already recovered from.** If the model produced its final answer after the
+  failure, the operation already succeeded; retrying it would repeat its side effects.
 - **After the user interjects.** A new user message resets the retry state, so the loop always
   yields to the human.
 - **A clean turn.** Success resets the counters, so the next failure starts from attempt one.
@@ -61,6 +69,9 @@ you to continue, say what you were doing and pick it up again.
 When a turn is retried, the reason you are given names the failure and the attempt number. Treat
 it as an instruction to repeat the *same* operation:
 
+- The attempt number counts the retries of *this* failure. A successful call resets it, so
+  "attempt 1" means the first try at the failure in front of you, not the first try of the session.
+
 - Do **not** change the approach, rewrite the prompt, or switch tools because the first attempt
   failed.
 - Do **not** apologise or explain that you are retrying; just make the call again.
@@ -91,14 +102,17 @@ reach it:
   "delayMs": 5000,
   "backoffMultiplier": 2,
   "maxDelayMs": 60000,
-  "maxRetries": null,
-  "maxDurationMs": null,
+  "maxRetries": 3,
+  "maxDurationMs": 120000,
   "debug": false
 }
 ```
 
-`maxRetries` and `maxDurationMs` are `null` by default, meaning unlimited. `debug: true` appends
-a heartbeat line to `heartbeat.log` on every turn end and to `post-tool-heartbeat.log` on every
+`maxRetries` is how many continuations one failure episode gets, and `maxDurationMs` how long that
+episode may last. The defaults are finite on purpose — the runtime allows eight `Stop`
+continuations per turn, so an unbounded plugin turns one permanent failure into eight extra model
+round-trips. `null` is the explicit opt-out and means "no limit". `debug: true` appends a
+heartbeat line to `heartbeat.log` on every turn end and to `post-tool-heartbeat.log` on every
 tool call.
 
 Because the hook itself has a 10-second execution budget, a delay longer than that is trimmed to
