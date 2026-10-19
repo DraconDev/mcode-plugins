@@ -10,29 +10,5 @@
         }
       ]
     }
-  ],
-  "SessionStart": [
-    {
-      "matcher": "*",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "node \"${PLUGIN_ROOT}/hooks/stop-retry.mjs\"",
-          "timeout": 10
-        }
-      ]
-    }
-  ],
-  "PostToolUse": [
-    {
-      "matcher": "*",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "node \"${PLUGIN_ROOT}/hooks/stop-retry.mjs\"",
-          "timeout": 10
-        }
-      ]
-    }
   ]
 }
