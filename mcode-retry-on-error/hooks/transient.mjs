@@ -134,7 +134,7 @@ const WEAK_TRANSIENT = [
  *
  * These are phrases that only appear when something is actually being reported
  * as throttled, overloaded or unreachable. The numeric forms live in the weak
- * tier below and have to sit next to a failure word in a status position.
+ * tier and have to sit next to a failure word in a status position.
  */
 const STRONG_TRANSIENT = [
   /too many requests/i,
