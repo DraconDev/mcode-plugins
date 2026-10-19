@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "mcode-retry-on-error",
+  "displayName": "MCode Retry On Error",
+  "version": "1.0.1",
+  "description": "Automatically continue a MiniMax Code turn that ended in an error or a rate-limited tool call, with exponential backoff, instead of giving up.",
+  "author": "Dracon",
+  "icon": "icon.webp",
+  "skills": [
+    "skills/retry-on-error"
+  ],
+  "hooks": [
+    "hooks/hooks.json"
+  ]
+}
