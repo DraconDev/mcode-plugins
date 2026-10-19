@@ -1,29 +1,24 @@
 #!/usr/bin/env node
 /**
- * Raise the LLM provider retry budget in MiniMax Code.
+ * Make MiniMax Code's provider retries persistent.
  *
- * The problem
- * -----------
- * When the model provider rate-limits a request — the `The model provider is
- * rate limiting requests. Code: 50150` error — MiniMax Code retries the
- * request itself, but the budget is a hardcoded constant:
+ * Two patches, both to the mcode bundle, both reversible.
+ *
+ * 1. The retry budget
+ * -------------------
+ * When the model provider rate-limits a request, MiniMax Code retries it
+ * itself, but the budget is a hardcoded constant:
  *
  *     {maxRetries: 5, baseDelayMs: 1000, maxDelayMs: 30000, maxRetryElapsedMs: 120000}
  *
- * Five retries means six attempts over about ninety seconds, then the turn
- * dies. A provider that is throttling for a few minutes is a common, and
- * entirely transient, condition.
- *
- * There is no way to configure this. The policy is applied by
+ * Five retries means six attempts over about twenty seconds of waiting, then
+ * the turn dies. There is no way to configure this. The policy is applied by
  * `Gpn(t.policy)`, which merges over the constant, but `t.policy` never
  * arrives: the only caller that supplies `resolveLlmRetry` hands back an
  * observer and nothing else, and there is no config key or environment
  * variable for it anywhere in the bundle. The constant is the only lever.
  *
- * The fix
- * -------
- * Patch the constant so the retry survives a quota window rather than a
- * momentary burst:
+ * It becomes:
  *
  *     {maxRetries: 200, baseDelayMs: 1500, maxDelayMs: 300000, maxRetryElapsedMs: 21600000}
  *
@@ -33,10 +28,25 @@
  * outlast a quota that takes hours to reset. The attempt count is a backstop;
  * the wall clock is what actually binds.
  *
- * The error this exists for is `Code: 50150`, which is `LLM_TPM_RATE_LIMITED`
- * — a token-per-minute limit, which the retry classifier treats as
- * retryable. It is not a terminal "usage limit" (42212) or "credits
- * exhausted" (50110); those are never retried by anything.
+ * 2. The retryable-error classifier
+ * ----------------------------------
+ * The provider's own protocol codes are classified by `xqe`, and two of them
+ * are hardcoded as terminal:
+ *
+ *     42212  USAGE_LIMIT_EXCEEDED    a quota that is spent
+ *     50110  LLM_CREDITS_EXHAUSTED   credits that are spent
+ *
+ * A terminal error ends the turn immediately: no retry, no backoff, nothing.
+ * That is wrong for a quota that resets on a timer. The patch moves both
+ * behind the retryable path, where the budget above applies:
+ *
+ *   - upstream status 2056 or 2067  -> 42212, now retried
+ *   - upstream status 402, or provider message code 1008 -> 50110, now retried
+ *
+ * Everything else is left exactly as it was. An authentication failure
+ * (401/403) stays terminal — a bad credential will not fix itself, and
+ * retrying it for six hours is pointless. So do a content filter, a refusal,
+ * and an explicit abort by the user.
  *
  * This is a policy change to a third-party install, not a bug fix. It is
  * reverted by `mcode update`, so re-run this script afterwards. The original
@@ -82,6 +92,31 @@ const KNOWN_POLICIES = [
 ];
 
 const KEYS = ['maxRetries', 'baseDelayMs', 'maxDelayMs', 'maxRetryElapsedMs'];
+
+/**
+ * The terminal-error guard in the retry classifier.
+ *
+ * Matched as a regex because the minifier writes `!1` for false, and that can
+ * change between releases. The property and signal names are not minified, so
+ * they are the stable part.
+ */
+const QUOTA_GUARD = new RegExp(
+  'if\\(t\\.explicitAbort\\|\\|t\\.signals\\.has\\("usage_limit"\\)\\|\\|t\\.signals\\.has\\("credits_exhausted"\\)' +
+    '\\|\\|t\\.signals\\.has\\("content_filter"\\)\\|\\|t\\.signals\\.has\\("refusal"\\)' +
+    '\\|\\|n==="abort"\\|\\|n==="usage_limit"\\|\\|n==="credits_exhausted"\\|\\|n==="auth"\\)' +
+    'return\\{retryable:(!1|false),reason:n\\};',
+);
+
+/**
+ * The replacement: a spent quota or exhausted credits becomes retryable, and
+ * the genuinely terminal cases stay terminal.
+ */
+const QUOTA_REPLACEMENT =
+  'if(t.explicitAbort||t.signals.has("content_filter")||t.signals.has("refusal")||n==="abort"||n==="auth")' +
+  'return{retryable:!1,reason:n};' +
+  'if(t.existingProtocolCode===Ir.USAGE_LIMIT_EXCEEDED||t.existingProtocolCode===Ir.LLM_CREDITS_EXHAUSTED' +
+  '||t.signals.has("usage_limit")||t.signals.has("credits_exhausted")||kqe(t.upstreamStatusCode)||g_(t)===402)' +
+  'return{retryable:!0,reason:n};';
 
 const checkOnly = process.argv.includes('--check');
 const revert = process.argv.includes('--revert');
@@ -207,40 +242,49 @@ if (!found) {
   process.exit(1);
 }
 
+// The classifier lives in the same chunk as the policy.
+const guardMatch = found.source.match(QUOTA_GUARD);
+const guardPatched = guardMatch !== null && guardMatch[0].includes('Ir.USAGE_LIMIT_EXCEEDED');
+
 const current = found.match.values;
 const isPatched = samePolicy(current, PATCHED_POLICY);
 const isDefault = samePolicy(current, DEFAULT_POLICY);
 const isKnown = KNOWN_POLICIES.some((policy) => samePolicy(current, policy));
 
 if (checkOnly) {
-  if (isPatched) {
-    console.log(`OK  retry policy is raised: ${formatPolicy(current)}`);
-    console.log(`    ${found.path}`);
-    process.exit(0);
-  }
-  console.log(`BAD retry policy is not the raised one: ${formatPolicy(current)}`);
+  console.log(
+    isPatched
+      ? `OK  retry budget is raised: ${formatPolicy(current)}`
+      : `BAD retry budget is not the raised one: ${formatPolicy(current)}`,
+  );
+  console.log(
+    guardPatched
+      ? 'OK  a spent quota (42212) and exhausted credits (50110) are retried'
+      : 'BAD a spent quota (42212) and exhausted credits (50110) are still terminal',
+  );
   console.log(`    ${found.path}`);
-  process.exit(1);
+  process.exit(isPatched && guardPatched ? 0 : 1);
 }
 
 if (revert) {
-  if (isDefault) {
-    console.log(`already at MiniMax Code's default: ${formatPolicy(current)}`);
-    process.exit(0);
+  let source = found.source;
+  if (guardPatched) {
+    source = source.replace(QUOTA_GUARD, QUOTA_GUARD_SOURCE);
+    console.log('reverted: a spent quota and exhausted credits are terminal again');
   }
-  const updated =
-    found.source.slice(0, found.match.start) +
-    formatPolicy(DEFAULT_POLICY) +
-    found.source.slice(found.match.end);
-  writeFileSync(found.path, updated);
-  console.log(`reverted retry policy to: ${formatPolicy(DEFAULT_POLICY)}`);
-  console.log(`  ${found.path}`);
-  process.exit(0);
-}
-
-if (isPatched) {
-  console.log(`already patched: ${formatPolicy(current)}`);
-  console.log(`  ${found.path}`);
+  if (!isDefault) {
+    source =
+      source.slice(0, found.match.start) +
+      formatPolicy(DEFAULT_POLICY) +
+      source.slice(found.match.end);
+    console.log(`reverted retry budget to: ${formatPolicy(DEFAULT_POLICY)}`);
+  }
+  if (source !== found.source) {
+    writeFileSync(found.path, source);
+    console.log(`  ${found.path}`);
+  } else {
+    console.log('already at MiniMax Code\'s defaults');
+  }
   process.exit(0);
 }
 
@@ -259,13 +303,31 @@ if (!existsSync(backup)) {
   console.log(`backed up the original chunk: ${backup}`);
 }
 
-const updated =
-  found.source.slice(0, found.match.start) +
-  formatPolicy(PATCHED_POLICY) +
-  found.source.slice(found.match.end);
-writeFileSync(found.path, updated);
+let source = found.source;
 
-console.log(`patched retry policy: ${formatPolicy(DEFAULT_POLICY)} -> ${formatPolicy(PATCHED_POLICY)}`);
+if (isPatched) {
+  console.log(`retry budget already raised: ${formatPolicy(current)}`);
+} else {
+  source =
+    source.slice(0, found.match.start) +
+    formatPolicy(PATCHED_POLICY) +
+    source.slice(found.match.end);
+  console.log(`patched retry budget: ${formatPolicy(current)} -> ${formatPolicy(PATCHED_POLICY)}`);
+}
+
+if (guardPatched) {
+  console.log('spent quota and exhausted credits are already retryable');
+} else {
+  const matches = source.match(QUOTA_GUARD);
+  if (!matches || matches.length !== 1) {
+    console.error('ABORT: could not locate the retryable-error classifier guard.');
+    process.exit(1);
+  }
+  source = source.replace(QUOTA_GUARD, QUOTA_REPLACEMENT);
+  console.log('patched the classifier: 42212 and 50110 are now retryable');
+}
+
+writeFileSync(found.path, source);
 console.log(`  ${found.path}`);
 console.log('');
 console.log('Six hours of retries — about a hundred attempts, settling to one every five minutes.');
