@@ -22,13 +22,21 @@
  *
  * The fix
  * -------
- * Patch the constant to the same policy the image plugins use: fifteen
- * retries, each a little later than the last.
+ * Patch the constant so the retry survives a quota window rather than a
+ * momentary burst:
  *
- *     {maxRetries: 15, baseDelayMs: 1500, maxDelayMs: 30000, maxRetryElapsedMs: 900000}
+ *     {maxRetries: 200, baseDelayMs: 1500, maxDelayMs: 300000, maxRetryElapsedMs: 21600000}
  *
- * That is sixteen attempts spread over roughly six minutes, with a fifteen
- * minute ceiling in case a server asks for a long `Retry-After`.
+ * The first few attempts stay close together, so a rate limit that clears in
+ * seconds is caught almost immediately. The delay then doubles up to a
+ * five-minute cap, and the loop keeps going for six hours — long enough to
+ * outlast a quota that takes hours to reset. The attempt count is a backstop;
+ * the wall clock is what actually binds.
+ *
+ * The error this exists for is `Code: 50150`, which is `LLM_TPM_RATE_LIMITED`
+ * — a token-per-minute limit, which the retry classifier treats as
+ * retryable. It is not a terminal "usage limit" (42212) or "credits
+ * exhausted" (50110); those are never retried by anything.
  *
  * This is a policy change to a third-party install, not a bug fix. It is
  * reverted by `mcode update`, so re-run this script afterwards. The original
@@ -246,6 +254,6 @@ writeFileSync(found.path, updated);
 console.log(`patched retry policy: ${formatPolicy(DEFAULT_POLICY)} -> ${formatPolicy(PATCHED_POLICY)}`);
 console.log(`  ${found.path}`);
 console.log('');
-console.log('Sixteen attempts over roughly six minutes, instead of six over ninety seconds.');
+console.log('Six hours of retries — about a hundred attempts, settling to one every five minutes.');
 console.log('Re-run this script after `mcode update` — the bundle is replaced wholesale there.');
 console.log('Revert with: node scripts/apply-mcode-llm-retry-policy.mjs --revert');
