@@ -234,6 +234,38 @@ async function runHook(payload, { env = {} } = {}) {
   );
 }
 
+// 14. A failed command whose output merely contains a number is not transient.
+{
+  const { parsed } = await runHook({
+    tool_response: JSON.stringify({
+      details: { execution: { status: 'failed', exitCode: 1, message: 'Command exited with code 1' } },
+      content: [
+        {
+          type: 'text',
+          text: 'patched retry policy: {maxRetries:5,baseDelayMs:1000,maxDelayMs:30000,maxRetryElapsedMs:120000} -> {maxRetries:200,baseDelayMs:1500,maxDelayMs:300000,maxRetryElapsedMs:21600000}',
+        },
+      ],
+    }),
+  });
+  check(
+    'a bare number in failed output is not transient',
+    parsed === null,
+    parsed ? JSON.stringify(parsed).slice(0, 80) : 'no output',
+  );
+}
+
+// 15. A bare status next to an error word still counts.
+{
+  const { parsed } = await runHook({
+    tool_response: 'upstream responded 503 while fetching the model',
+  });
+  check(
+    'a bare status beside an error word is transient',
+    parsed?.hookSpecificOutput?.additionalContext !== undefined,
+    parsed ? 'matched' : 'no output',
+  );
+}
+
 const failed = results.filter((r) => !r.ok);
 process.stdout.write(`\n${results.length - failed.length}/${results.length} passed\n`);
 process.exit(failed.length === 0 ? 0 : 1);
