@@ -123,7 +123,14 @@ export function createTools({ workspaceCwd }) {
           },
           savePath: {
             type: 'string',
-            description: 'Optional path to also write the image to, relative to the workspace.',
+            description:
+              'Where to write the image. Use an ABSOLUTE path: the plugin server runs with the ' +
+              'home directory as its working directory, not your workspace, so a relative path ' +
+              'would land in the wrong place.',
+          },
+          baseDir: {
+            type: 'string',
+            description: 'Directory a relative savePath resolves against. Defaults to the server working directory.',
           },
           maxRetries: { type: 'number', description: 'Override the retry count (default 15).' },
         },
@@ -151,7 +158,7 @@ export function createTools({ workspaceCwd }) {
           blocks.push({ type: 'image', data: base64, mimeType: image.mimeType });
 
           if (args.savePath) {
-            const target = resolve(workspaceCwd, args.savePath);
+            const target = resolve(args.baseDir ?? workspaceCwd, args.savePath);
             await mkdir(dirname(target), { recursive: true });
             await writeFile(target, Buffer.from(base64, 'base64'));
             blocks.push({ type: 'text', text: `Saved to ${target}.` });
@@ -195,7 +202,13 @@ export function createTools({ workspaceCwd }) {
           frameRate: { type: 'number', description: 'Frame rate, if the model accepts it.' },
           savePath: {
             type: 'string',
-            description: 'Optional path to download the finished video to.',
+            description:
+              'Where to download the video. Use an ABSOLUTE path: the plugin server runs with ' +
+              'the home directory as its working directory, not your workspace.',
+          },
+          baseDir: {
+            type: 'string',
+            description: 'Directory a relative savePath resolves against. Defaults to the server working directory.',
           },
           maxRetries: { type: 'number', description: 'Override the retry count (default 15).' },
         },
@@ -220,7 +233,7 @@ export function createTools({ workspaceCwd }) {
 
           const blocks = [];
           if (args.savePath) {
-            const target = resolve(workspaceCwd, args.savePath);
+            const target = resolve(args.baseDir ?? workspaceCwd, args.savePath);
             await mkdir(dirname(target), { recursive: true });
             const response = await fetch(video.url);
             if (!response.ok) {

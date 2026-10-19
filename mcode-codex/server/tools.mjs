@@ -142,7 +142,7 @@ export function createTools({ workspaceCwd, sessionKey }) {
           const blocks = [{ type: 'image', data: image.base64, mimeType }];
 
           if (args.savePath) {
-            const target = resolve(workspaceCwd, args.savePath);
+            const target = resolve(args.baseDir ?? workspaceCwd, args.savePath);
             await mkdir(dirname(target), { recursive: true });
             await writeFile(target, Buffer.from(image.base64, 'base64'));
             blocks.push({ type: 'text', text: `Saved to ${target}.` });
