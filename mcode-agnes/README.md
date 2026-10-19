@@ -33,11 +33,19 @@ The media core is ported from [`pi-agnes-tools`](https://github.com/DraconDev/pi
 (MIT), so the same API, models and quirks apply in both agents. pi keeps its own text-model
 catalog; this plugin is media only.
 
+## Paths
+
+`savePath` takes a local path. A relative path resolves against the **agent workspace** — the
+directory mcode was launched from — because MiniMax Code spawns plugin MCP servers with the home
+directory as their working directory and passes no workspace path in the environment. An absolute
+path is unambiguous and preferred; `baseDir` overrides the base directory for a relative path.
+
 ## Test
 
 ```bash
 node scripts/smoke-test.mjs            # status only, no credits spent
 node scripts/smoke-test.mjs --generate # also generate one real image
+node scripts/build-manifest.mjs        # regenerate mcp/agnes.mcp.json from server/tools.mjs
 ```
 
 ## Licence
