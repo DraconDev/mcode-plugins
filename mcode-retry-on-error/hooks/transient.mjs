@@ -45,28 +45,6 @@ const TERMINAL_FAILURE = [
 ];
 
 /**
- * Strong transient signals.
- *
- * These are phrases that only appear when something is actually being reported
- * as throttled, overloaded or unreachable.
- */
-const STRONG_TRANSIENT = [
-  /rate[\s_-]?limit/i,
-  /too many requests/i,
-  /overloaded/i,
-  /temporarily unavailable/i,
-  /service unavailable/i,
-  /bad gateway/i,
-  /gateway timeout/i,
-  /ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE/i,
-  /socket hang up/i,
-  /fetch failed/i,
-  /network error/i,
-  ...QUOTA_TRANSIENT,
-  ...TIMEOUT_TRANSIENT,
-];
-
-/**
  * Quota exhaustion.
  *
  * "quota" is also the word a host policy uses — "command exceeded quota
@@ -80,6 +58,15 @@ const QUOTA_TRANSIENT = [
   /\b(?:exceeded|exhausted|depleted|insufficient|ran out|used up)\b[^\n]{0,60}\bquota\b(?![-_\s]*(?:polic|rule|guard|check))/i,
   /\bcredits?\b[^\n]{0,40}\b(?:exhausted|depleted|exhaustion|ran out)\b/i,
 ];
+
+/**
+ * Words that put a timeout in a request, a socket or a deadline.
+ *
+ * The word boundaries matter: "REAL_SERVER_TIMEOUT_MS" is a constant name,
+ * not a server that timed out.
+ */
+const TIMEOUT_CONTEXT =
+  String.raw`\b(?:request|requests|connect|connecting|connection|connected|response|respond|responding|responded|returned|fetch|fetching|socket|upstream|server|endpoint|api|network|handshake|deadline|operation|command|curl|await|after)\b`;
 
 /**
  * Timeouts.
@@ -98,13 +85,14 @@ const TIMEOUT_TRANSIENT = [
 ];
 
 /**
- * Words that put a timeout in a request, a socket or a deadline.
- *
- * The word boundaries matter: "REAL_SERVER_TIMEOUT_MS" is a constant name,
- * not a server that timed out.
+ * A status number that can be transient: 429, 408 and the 5xx range.
  */
-const TIMEOUT_CONTEXT =
-  String.raw`\b(?:request|requests|connect|connecting|connection|connected|response|respond|responding|responded|returned|fetch|fetching|socket|upstream|server|endpoint|api|network|handshake|deadline|operation|command|curl|await|after)\b`;
+const STATUS_NUMBER = String.raw`\b(?:429|5\d\d|408)\b`;
+
+/**
+ * Words that put a number in a status position.
+ */
+const STATUS_CONTEXT = String.raw`\b(?:HTTP|status(?:\s+code)?|code|error\s+code|responded|returned|received|response|reply|upstream|server|service|endpoint|api|request|curl|errno|error)\b`;
 
 /**
  * Weak transient signals: a bare HTTP status.
@@ -120,11 +108,28 @@ const WEAK_TRANSIENT = [
   new RegExp(`${STATUS_NUMBER}[^\\n]{0,20}${STATUS_CONTEXT}`, 'i'),
 ];
 
-/** A status number that can be transient: 429, 408 and the 5xx range. */
-const STATUS_NUMBER = String.raw`\b(?:429|5\d\d|408)\b`;
-
-/** Words that put a number in a status position. */
-const STATUS_CONTEXT = String.raw`\b(?:HTTP|status(?:\s+code)?|code|error\s+code|responded|returned|received|response|reply|upstream|server|service|endpoint|api|request|curl|errno|error)\b`;
+/**
+ * Strong transient signals.
+ *
+ * These are phrases that only appear when something is actually being reported
+ * as throttled, overloaded or unreachable. The numeric forms live in the weak
+ * tier below and have to sit next to a failure word in a status position.
+ */
+const STRONG_TRANSIENT = [
+  /rate[\s_-]?limit/i,
+  /too many requests/i,
+  /overloaded/i,
+  /temporarily unavailable/i,
+  /service unavailable/i,
+  /bad gateway/i,
+  /gateway timeout/i,
+  /ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE/i,
+  /socket hang up/i,
+  /fetch failed/i,
+  /network error/i,
+  ...QUOTA_TRANSIENT,
+  ...TIMEOUT_TRANSIENT,
+];
 
 /**
  * Markers that a piece of text is reporting a *failure*, as opposed to
