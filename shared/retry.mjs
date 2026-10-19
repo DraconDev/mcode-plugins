@@ -142,6 +142,8 @@ const sleep = (ms, signal, cause) =>
  * @param {object} [options]
  * @param {number} [options.maxRetries] - attempts after the first. Default: 15.
  * @param {number} [options.maxDurationMs] - total wall-clock budget. Default: 15 minutes.
+ *   A delay is clamped to what is left of the budget, and no attempt starts
+ *   after the budget has expired.
  * @param {number} [options.baseDelayMs] - first backoff delay. Default: 1500.
  * @param {number} [options.multiplier] - backoff growth. Default: 1.6.
  * @param {number} [options.maxDelayMs] - cap on one computed delay. Default: 12000.

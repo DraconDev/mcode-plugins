@@ -18,10 +18,29 @@ SOURCE_DIR="$REPO_ROOT/$PLUGIN_NAME"
 DATA_DIR="${MINIMAX_DATA_DIR:-$HOME/.minimax}"
 TARGET_DIR="$DATA_DIR/plugins/$PLUGIN_NAME"
 
+# The name goes straight into a path that is then deleted recursively, so it
+# has to be a plain name. Without this, an empty argument resolves to the
+# plugins directory itself — which would uninstall every plugin — and a name
+# like "../../.." resolves outside it entirely.
+if ! printf '%s' "$PLUGIN_NAME" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+  echo "invalid plugin name: '$PLUGIN_NAME'" >&2
+  echo "expected a plain name such as mcode-agnes (letters, digits, dot, dash, underscore)" >&2
+  exit 2
+fi
+
 if [ ! -d "$SOURCE_DIR" ]; then
   echo "no such plugin directory: $SOURCE_DIR" >&2
   exit 1
 fi
+
+# Belt and braces: the delete target must stay inside the plugins directory.
+case "$TARGET_DIR" in
+  "$DATA_DIR/plugins/"*) ;;
+  *)
+    echo "refusing to install outside $DATA_DIR/plugins: $TARGET_DIR" >&2
+    exit 1
+    ;;
+esac
 
 echo "source:  $SOURCE_DIR"
 echo "target:  $TARGET_DIR"
@@ -41,9 +60,10 @@ for item in .minimax-plugin .claude-plugin .codex-plugin mcp server skills hooks
   [ -e "$SOURCE_DIR/$item" ] && cp -R "$SOURCE_DIR/$item" "$TARGET_DIR/"
 done
 
-# Shared modules live once in the repository and are copied into each plugin,
-# so the installed plugin is self-contained and there is still one source.
-if [ -d "$REPO_ROOT/shared" ]; then
+# Shared modules live once in the repository and are copied into each plugin
+# that has an MCP server, so the installed plugin is self-contained and there
+# is still one source. A plugin with no server directory gets none.
+if [ -d "$SOURCE_DIR/server" ] && [ -d "$REPO_ROOT/shared" ]; then
   mkdir -p "$TARGET_DIR/server"
   cp "$REPO_ROOT"/shared/*.mjs "$TARGET_DIR/server/" 2>/dev/null || true
 fi
