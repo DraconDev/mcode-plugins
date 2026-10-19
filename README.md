@@ -46,8 +46,26 @@ The image plugins share one retry core (`shared/retry.mjs`), and the behaviour i
 The image plugins are the reason this exists: the ChatGPT subscription has its own quota and will
 answer 429 under load, and a task that dies on the first 429 is worse than one that waits.
 
-`mcode-retry-on-error` is a different mechanism for the same goal: it works at the *turn* level, so
-it also covers provider errors and failures in tools that have no retry policy of their own.
+`mcode-retry-on-error` is a different mechanism for the same goal: it works at the *tool* and *turn*
+level, so it also covers failures in tools that have no retry policy of their own.
+
+### What the retry plugin can and cannot reach
+
+It has two hooks. `PostToolUse` fires the instant a tool fails and injects a retry instruction
+into the tool result, while the model is still working. `Stop` is the backstop for a turn that
+tried to end in an error.
+
+**Provider rate limits are not reachable by any plugin, and mcode already handles them.** The
+`The model provider is rate limiting requests. Code: 50150` error never reaches the session
+transcript, and the `Stop` hook never fires for it — the run aborts before a turn completes.
+MiniMax Code retries that layer itself (5 attempts over 2 minutes, shown as
+`Retrying model request · 3/5`), then points at `/retry`, and the goal runtime parks the session
+as `Usage limited — Resume after provider access recovers`.
+
+Measured: across 7,185 assistant messages in a day's transcripts, the `stopReason` is only ever
+`toolUse` or `stop` — never `error` — and the provider error string appears in no transcript at
+all. Forcing a provider failure with an unreachable endpoint confirmed it: the run failed and the
+hook never ran.
 
 ## Credentials
 
@@ -74,7 +92,8 @@ node mcode-agnes/scripts/smoke-test.mjs            # status only, no credits spe
 node mcode-agnes/scripts/smoke-test.mjs --generate # also generate one real image
 node mcode-codex/scripts/smoke-test.mjs            # status only, no credits spent
 node mcode-codex/scripts/smoke-test.mjs --generate # also generate one real image
-node mcode-retry-on-error/scripts/hook-test.mjs    # the turn-level retry decisions
+node mcode-retry-on-error/scripts/hook-test.mjs    # the Stop hook decisions
+node mcode-retry-on-error/scripts/post-tool-hook-test.mjs # the PostToolUse decisions
 ```
 
 Regenerate the plugin manifests after changing any tool definition:
