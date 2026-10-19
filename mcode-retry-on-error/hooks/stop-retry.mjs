@@ -118,6 +118,61 @@ const DATA_DIR =
   process.env.PLUGIN_DATA ??
   join(process.env.MINIMAX_DATA_DIR ?? join(homedir(), '.minimax'), 'plugin-data', 'mcode-retry-on-error');
 
+/**
+ * Configuration comes from a file, not the environment.
+ *
+ * MiniMax Code gives a hook process a whitelisted environment (PATH, HOME,
+ * TMPDIR, ...) plus the PLUGIN_* variables — it does not pass the user's shell
+ * environment through. So `MCODE_RETRY_*` variables set in a shell would never
+ * reach this script. The file below is the real control surface; the
+ * environment variables are honoured as well, so the hook can still be driven
+ * by hand in a test.
+ */
+const CONFIG_FILE = join(DATA_DIR, 'config.json');
+
+function readConfigFile() {
+  try {
+    const parsed = JSON.parse(readFileSync(CONFIG_FILE, 'utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+const CONFIG = readConfigFile();
+
+function configNumber(key, envName, fallback) {
+  const fromEnv = process.env[envName];
+  if (fromEnv !== undefined && fromEnv !== '') {
+    const parsed = Number(fromEnv);
+    if (Number.isFinite(parsed) && parsed >= 0) return Math.floor(parsed);
+  }
+  const fromFile = CONFIG[key];
+  if (fromFile === null || fromFile === undefined || fromFile === '') return fallback;
+  const parsed = Number(fromFile);
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return Math.floor(parsed);
+}
+
+const BASE_DELAY_MS = configNumber('delayMs', 'MCODE_RETRY_DELAY_MS', 5_000);
+const BACKOFF_MULTIPLIER = (() => {
+  const raw = CONFIG.backoffMultiplier ?? process.env.MCODE_RETRY_BACKOFF_MULTIPLIER;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 1 ? Math.min(parsed, 100) : 2;
+})();
+const MAX_DELAY_MS = configNumber('maxDelayMs', 'MCODE_RETRY_MAX_DELAY_MS', 60_000);
+const MAX_RETRIES = configNumber('maxRetries', 'MCODE_RETRY_MAX_RETRIES', Number.POSITIVE_INFINITY);
+const MAX_DURATION_MS = configNumber(
+  'maxDurationMs',
+  'MCODE_RETRY_MAX_DURATION_MS',
+  Number.POSITIVE_INFINITY,
+);
+const DISABLED =
+  CONFIG.enabled === false ||
+  process.env.MCODE_RETRY_DISABLED === '1' ||
+  CONFIG.disabled === true;
+const FORCE_BLOCK = CONFIG.forceBlock === true || process.env.MCODE_RETRY_FORCE_BLOCK === '1';
+
 /** Read the last chunk of a JSONL file and parse the trailing records. */
 function readTailRecords(path) {
   let size;
