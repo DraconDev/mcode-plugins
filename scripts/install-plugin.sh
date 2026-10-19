@@ -64,12 +64,16 @@ while IFS= read -r item; do
   fi
 done < "$REPO_ROOT/scripts/plugin-payload.txt"
 
-# Shared modules live once in the repository and are copied into each plugin
-# that has an MCP server, so the installed plugin is self-contained and there
-# is still one source. A plugin with no server directory gets none.
-if [ -d "$SOURCE_DIR/server" ] && [ -d "$REPO_ROOT/shared" ]; then
-  mkdir -p "$TARGET_DIR/server"
-  cp "$REPO_ROOT"/shared/*.mjs "$TARGET_DIR/server/" 2>/dev/null || true
+# The shared modules are copied into each plugin by scripts/sync-shared.mjs,
+# and the plugin's own server/ directory is installed as-is above. Copying
+# them again here would install whatever shared/ happens to hold — including
+# modules the plugin does not use. So this only checks that the copies are
+# current, and says so if they are not.
+if [ -d "$REPO_ROOT/shared" ] && [ -f "$REPO_ROOT/scripts/sync-shared.mjs" ]; then
+  if ! node "$REPO_ROOT/scripts/sync-shared.mjs" --check >/dev/null 2>&1; then
+    echo "warning: the shared module copies are out of date." >&2
+    echo "         run: node scripts/sync-shared.mjs" >&2
+  fi
 fi
 
 echo "installed to $TARGET_DIR"
