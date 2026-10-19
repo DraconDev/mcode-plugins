@@ -1,0 +1,98 @@
+{
+  "$schema": "../../schemas/mcp-v1.schema.json",
+  "schemaVersion": 1,
+  "mcpServers": {
+    "agnes": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "./server/main.mjs"
+      ],
+      "description": "Agnes AI image and video generation, with automatic retry on rate limits and transient failures.",
+      "timeout": 900000,
+      "tools": [
+        {
+          "name": "status",
+          "description": "Check the Agnes plugin: which endpoints are configured, where the API key came from, the available image and video models, and the retry policy. Start here if a generation call fails.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "generate_image",
+          "description": "Generate an image with Agnes AI. Returns the image inline so you can see it, and can also save it to disk. Rate limits and transient server errors are retried automatically, so a call that hits a quota usually still succeeds.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "prompt": { "type": "string", "description": "What the image should show." },
+              "model": {
+                "type": "string",
+                "enum": ["agnes-image-2.0-flash", "agnes-image-2.1-flash", "agnes-image-2.5-flash"],
+                "description": "Image model to use.",
+                "default": "agnes-image-2.5-flash"
+              },
+              "endpoint": {
+                "type": "string",
+                "enum": ["agnes", "agnes-cn"],
+                "description": "Which Agnes region to call.",
+                "default": "agnes"
+              },
+              "size": { "type": "string", "description": "Output size, e.g. \"1024x1024\"." },
+              "ratio": { "type": "string", "description": "Aspect ratio, e.g. \"16:9\"." },
+              "images": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Reference image URLs for image-to-image."
+              },
+              "savePath": {
+                "type": "string",
+                "description": "Optional path to also write the image to, relative to the workspace."
+              },
+              "maxRetries": { "type": "number", "description": "Override the retry count (default 15)." }
+            },
+            "required": ["prompt"],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "generate_video",
+          "description": "Generate a video with Agnes AI. Text-to-video, single-image keyframe, or start/end keyframes. Generation is polled until the task completes; transient failures are retried automatically.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "prompt": { "type": "string", "description": "What the video should show." },
+              "model": {
+                "type": "string",
+                "enum": ["agnes-video-v2.0", "agnes-video-2.5", "agnes-video-2.5-flash"],
+                "description": "Video model to use.",
+                "default": "agnes-video-2.5-flash"
+              },
+              "endpoint": {
+                "type": "string",
+                "enum": ["agnes", "agnes-cn"],
+                "description": "Which Agnes region to call.",
+                "default": "agnes"
+              },
+              "images": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Reference image URLs: one for a keyframe, two for start/end keyframes."
+              },
+              "numFrames": { "type": "number", "description": "Frame count, if the model accepts it." },
+              "frameRate": { "type": "number", "description": "Frame rate, if the model accepts it." },
+              "savePath": {
+                "type": "string",
+                "description": "Optional path to download the finished video to."
+              },
+              "maxRetries": { "type": "number", "description": "Override the retry count (default 15)." }
+            },
+            "required": ["prompt"],
+            "additionalProperties": false
+          }
+        }
+      ]
+    }
+  }
+}

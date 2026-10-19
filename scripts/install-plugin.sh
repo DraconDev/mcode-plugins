@@ -41,6 +41,13 @@ for item in .minimax-plugin .claude-plugin .codex-plugin mcp server skills hooks
   [ -e "$SOURCE_DIR/$item" ] && cp -R "$SOURCE_DIR/$item" "$TARGET_DIR/"
 done
 
+# Shared modules live once in the repository and are copied into each plugin,
+# so the installed plugin is self-contained and there is still one source.
+if [ -d "$REPO_ROOT/shared" ]; then
+  mkdir -p "$TARGET_DIR/server"
+  cp "$REPO_ROOT"/shared/*.mjs "$TARGET_DIR/server/" 2>/dev/null || true
+fi
+
 echo "installed to $TARGET_DIR"
 
 if command -v mcode >/dev/null 2>&1; then
