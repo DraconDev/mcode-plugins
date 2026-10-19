@@ -244,7 +244,7 @@ if (isPatched) {
   process.exit(0);
 }
 
-if (!isDefault) {
+if (!isKnown) {
   console.error(
     `ABORT: the bundle holds a policy this script does not recognise: ${formatPolicy(current)}\n` +
       'Refusing to overwrite it. Check whether a newer version changed the default.',
