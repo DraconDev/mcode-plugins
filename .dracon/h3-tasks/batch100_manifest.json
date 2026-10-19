@@ -1052,6 +1052,150 @@
       "w": 2752,
       "h": 1536,
       "size": 7748476
+    },
+    {
+      "file_name": "93_whales_underwater.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 6157157
+    },
+    {
+      "file_name": "95_hummingbird.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 5780730
+    },
+    {
+      "file_name": "97_jellyfish.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1536,
+      "h": 2752,
+      "size": 5823941
+    },
+    {
+      "file_name": "94_red_fox_in_snow.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1792,
+      "h": 2400,
+      "size": 6470064
+    },
+    {
+      "file_name": "96_elephant_dust.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 8655438
+    },
+    {
+      "file_name": "98_wolf_howling.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7222329
+    },
+    {
+      "file_name": "102_torii_gate_mist.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1536,
+      "h": 2752,
+      "size": 7722632
+    },
+    {
+      "file_name": "99_koi_pond.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2400,
+      "h": 1792,
+      "size": 6861586
+    },
+    {
+      "file_name": "100_sea_turtle_reef.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 8335058
+    },
+    {
+      "file_name": "103_clownfish_anemone.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 5484316
+    },
+    {
+      "file_name": "101_mosque_tiled_dome.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1792,
+      "h": 2400,
+      "size": 8357669
+    },
+    {
+      "file_name": "104_vintage_motorcycle_barn.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 2400,
+      "h": 1792,
+      "size": 4518721
+    },
+    {
+      "file_name": "107_sunflowers_storm_sky.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 3168,
+      "h": 1344,
+      "size": 5780390
+    },
+    {
+      "file_name": "106_roman_aqueduct_valley.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 8823405
+    },
+    {
+      "file_name": "105_reading_nook_rain.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1792,
+      "h": 2400,
+      "size": 6876660
+    },
+    {
+      "file_name": "108_macaron_tower.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 6865085
+    },
+    {
+      "file_name": "109_cyclist_misty_forest_road.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 6998736
+    },
+    {
+      "file_name": "110_observatory_telescope.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7275469
     }
   ]
 }

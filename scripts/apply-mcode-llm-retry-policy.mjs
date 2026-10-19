@@ -210,6 +210,7 @@ if (!found) {
 const current = found.match.values;
 const isPatched = samePolicy(current, PATCHED_POLICY);
 const isDefault = samePolicy(current, DEFAULT_POLICY);
+const isKnown = KNOWN_POLICIES.some((policy) => samePolicy(current, policy));
 
 if (checkOnly) {
   if (isPatched) {
@@ -217,7 +218,7 @@ if (checkOnly) {
     console.log(`    ${found.path}`);
     process.exit(0);
   }
-  console.log(`BAD retry policy is still the default: ${formatPolicy(current)}`);
+  console.log(`BAD retry policy is not the raised one: ${formatPolicy(current)}`);
   console.log(`    ${found.path}`);
   process.exit(1);
 }
