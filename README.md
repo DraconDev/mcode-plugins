@@ -3,67 +3,76 @@
 MiniMax Code plugins for this machine, plus the small runtime repairs they depend on.
 
 MiniMax Code plugins are directories that mcode loads: a manifest, an optional MCP server, and
-optional skills. Local plugins live at `~/.minimax/plugins/<name>/` and are registered with the
-`local` marketplace.
+optional skills. Local plugins live at `~/.minimax/plugins/<name>/` and are enabled by presence
+there.
 
 ## What is here
 
-| Path | What it is |
+| Plugin | What it does |
 | --- | --- |
 | `mcode-chrome/` | Drive the user's **real, signed-in Chrome** from mcode — real logins, real tabs, the tab you already have open. |
+| `mcode-agnes/` | Agnes AI image and video generation, using the credential pi already holds. |
+| `mcode-codex/` | ChatGPT subscription (Codex) image generation and editing, using the credential pi already holds. |
+| `mcode-retry-on-error/` | Continue a turn that ended in an error or a rate-limited tool call, with backoff. |
 | `scripts/apply-mcode-rm-shim-fix.mjs` | Repairs a broken recoverable-delete shim in `@minimax-ai/code` 0.6.12. See [Runtime repair](#runtime-repair). |
+| `shared/` | The retry core and the MCP stdio server, copied into each plugin that uses them. |
 
-## mcode-chrome
-
-mcode ships a Host-backed **in-app** Browser (`browser-use`, installed by default). It is a
-separate sandboxed browser — not your Chrome, so not your logins, tabs, or profile.
-
-`mcode-chrome` fills that gap. It speaks the same loopback wire protocol as
-[pi-chrome](https://github.com/tianrendong/pi-chrome), so it reuses the `Pi Chrome Connector`
-extension already installed in your normal Chrome profile. No second browser is launched, nothing
-is re-logged-in, and your cookies are your cookies.
-
-```
-MiniMax Code ──MCP (stdio)──> mcode-chrome server ──HTTP 127.0.0.1:17318──> Pi Chrome Connector ──> your Chrome
-```
-
-The MCP server is **owner-or-client**: it takes the loopback port when free, or forwards commands
-to whichever session already owns it. mcode and pi can drive the same browser at once, and
-whichever starts first brokers for the other. Each session also gets its own automation tab,
-grouped as `MCode Session: <id>`, so your active tab is never hijacked.
-
-23 tools are exposed as `mcp__chrome__*` — `status`, `tab`, `snapshot`, `find`, `inspect`,
-`navigate`, `evaluate`, `click`, `type`, `fill`, `key`, `hover`, `drag`, `tap`, `scroll`,
-`wait_for`, `console_messages`, `network_requests`, `network_request`, `screenshot`,
-`upload_file`, plus `authorize` / `revoke`. The `mcode-chrome:chrome-browser` skill covers the
-workflow, the authorization discipline, and secret handling.
-
-Full details, including what is ours versus what is borrowed from pi-chrome, are in
-[`mcode-chrome/README.md`](mcode-chrome/README.md).
-
-### Install
+## Install
 
 ```bash
-bash mcode-chrome/scripts/install.sh
-mcode plugin list          # expect: mcode-chrome@local  enabled
+scripts/install-plugin.sh mcode-chrome
+scripts/install-plugin.sh mcode-agnes
+scripts/install-plugin.sh mcode-codex
+scripts/install-plugin.sh mcode-retry-on-error
 ```
 
-The install script copies the plugin to `~/.minimax/plugins/mcode-chrome/` and registers it with
-the local marketplace. Local plugins are enabled by presence in that folder — `mcode plugin add
--m local` rejects a re-install of a plugin that is already there, so the script checks the list
-first and only adds when needed.
+The installer copies the plugin to `~/.minimax/plugins/<name>/` and registers it with the local
+marketplace. Local plugins are enabled by presence in that folder — `mcode plugin add -m local`
+rejects a re-install of a plugin that is already there, so the script checks the list first.
 
-### Test
+Verify with `mcode plugin list`.
+
+## The retry policy
+
+The image plugins share one retry core (`shared/retry.mjs`), and the behaviour is deliberate:
+
+- **15 attempts**, each a little later than the last — roughly two to three minutes in total
+- retried: 429, 408, 5xx, timeouts, dropped connections, `fetch failed`
+- a server's `Retry-After` is honoured
+- **not** retried: 400, 401, 403, 404, 422 — a bad request or a bad credential will fail
+  identically every time, and looping on it just burns quota
+- exponential backoff with jitter, so several agents hitting the same limit do not resynchronise
+
+The image plugins are the reason this exists: the ChatGPT subscription has its own quota and will
+answer 429 under load, and a task that dies on the first 429 is worse than one that waits.
+
+`mcode-retry-on-error` is a different mechanism for the same goal: it works at the *turn* level, so
+it also covers provider errors and failures in tools that have no retry policy of their own.
+
+## Credentials
+
+`mcode-agnes` and `mcode-codex` read the credential **pi already has**, from
+`~/.pi/agent/auth.json`:
+
+| Plugin | Key in pi's store | Environment override |
+| --- | --- | --- |
+| `mcode-agnes` | `agnes` | `AGNES_API_KEY`, `AGNES_CN_API_KEY` |
+| `mcode-codex` | `openai-codex` | `CODEX_IMAGE_ACCESS_TOKEN`, `CODEX_IMAGE_ACCOUNT_ID` |
+
+One login, two agents. The codex plugin refreshes an expired token in memory and does **not** write
+back to pi's auth file, so it cannot corrupt another tool's state.
+
+## Test
 
 ```bash
-node mcode-chrome/scripts/server-mode-test.mjs   # standalone protocol round trip
-node mcode-chrome/scripts/smoke-test.mjs         # MCP handshake against the live bridge
-node mcode-chrome/scripts/e2e-test.mjs           # navigate + snapshot + find + evaluate + screenshot
+node scripts/retry-test.mjs                        # the retry policy
+node scripts/sync-shared.mjs --check               # shared modules in sync
+node mcode-chrome/scripts/server-mode-test.mjs     # standalone protocol round trip
+node mcode-chrome/scripts/smoke-test.mjs           # MCP handshake against the live bridge
+node mcode-agnes/scripts/smoke-test.mjs            # status only, no credits spent
+node mcode-agnes/scripts/smoke-test.mjs --generate # also generate one real image
+node mcode-retry-on-error/scripts/hook-test.mjs    # the turn-level retry decisions
 ```
-
-`server-mode-test.mjs` runs the bridge as the port owner against a mock companion extension, so
-it covers the branch a live test cannot reach while another session owns the port. It is the
-proof that the plugin does not depend on pi being installed or running.
 
 ## Runtime repair
 
@@ -92,6 +101,23 @@ node scripts/apply-mcode-rm-shim-fix.mjs --check   # report only, no writes
 `mcode update` replaces the bundle wholesale, so re-run the script afterwards. The script is
 idempotent and safe to run at any time.
 
+## Known gap: local plugin hooks do not fire in 0.6.12
+
+`mcode-retry-on-error` installs a `Stop` hook that blocks a failed turn and feeds a retry
+instruction back to the model. The hook logic is complete and covered by
+`mcode-retry-on-error/scripts/hook-test.mjs` (8/8), and the plugin loads — its skill appears in
+the session catalog.
+
+But mcode 0.6.12 parses the hook declaration and never dispatches it. Verified against both
+plugin manifest formats (`.minimax-plugin/plugin.json` and `.claude-plugin/plugin.json`) and
+across three hook events (`SessionStart`, `PostToolUse`, `Stop`): the hook process is never
+spawned, so the plugin's data directory is never even created. Skills, MCP servers and icons from
+the same plugin load normally, so it is specifically hook dispatch that is inert for local plugins.
+
+Until that is fixed upstream, the retry behaviour the plugins actually provide is the call-level
+one in `shared/retry.mjs`, which needs no hook support. The hook plugin is kept because its logic
+is correct and it will start working the moment dispatch is fixed — no change required here.
+
 ## Conventions
 
 - **Licence.** This repository is AGPL-3.0. Plugins declare the same licence. Code reused from
@@ -102,6 +128,8 @@ idempotent and safe to run at any time.
   (`*.orig.bak`).
 - **Zero runtime dependencies.** Plugins run from a plain `node` executable with no
   `node_modules`, so they can be copied anywhere mcode runs.
-- **The manifest is generated.** `mcode-chrome/scripts/build-manifest.mjs` derives
-  `mcp/chrome.mcp.json` from `server/tools.mjs`, so the declared tool list can never drift from
-  the running server. Re-run it after changing the tool set.
+- **Shared code is generated, not hand-copied.** `shared/` holds the single copy of the retry core
+  and the MCP server; `scripts/sync-shared.mjs` copies it into each plugin and `--check` fails if
+  they have drifted. `mcode-chrome/scripts/build-manifest.mjs` does the same for the plugin
+  manifest, deriving `mcp/chrome.mcp.json` from `server/tools.mjs` so the declared tool list can
+  never drift from the running server.
