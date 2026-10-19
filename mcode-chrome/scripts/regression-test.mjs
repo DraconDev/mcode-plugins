@@ -368,6 +368,59 @@ const exitCode = await exited;
 check('the server exits cleanly after stdin ends', exitCode === 0, `exit=${exitCode}`);
 
 // ---------------------------------------------------------------------------
+// 8. `probeStatus()` must not wait on an unresponsive bridge owner.
+// ---------------------------------------------------------------------------
+
+const probePort = await freePort();
+const probeScript = `
+import { createServer } from 'node:net';
+const port = Number(process.env.PROBE_PORT);
+// Accept the connection and never answer: the owner is alive but hung.
+const hang = createServer(() => {});
+hang.listen(port, '127.0.0.1', async () => {
+  const { ChromeBridge } = await import(process.env.BRIDGE_MODULE);
+  const bridge = new ChromeBridge({ url: 'http://127.0.0.1:' + port });
+  await bridge.start();
+  const started = Date.now();
+  const status = await bridge.probeStatus();
+  process.stdout.write(JSON.stringify({ elapsed: Date.now() - started, connected: status.connected }));
+  process.exit(0);
+});
+`;
+const probe = spawn(process.execPath, ['--input-type=module', '-e', probeScript], {
+  env: {
+    ...process.env,
+    PROBE_PORT: String(probePort),
+    BRIDGE_MODULE: bridgeModulePath,
+    // An explicit URL means "client only": the bridge talks to the hung owner
+    // instead of binding the port itself.
+    MCODE_CHROME_BRIDGE_URL: `http://127.0.0.1:${probePort}`,
+  },
+  stdio: ['ignore', 'pipe', 'pipe'],
+});
+let probeOut = '';
+probe.stdout.setEncoding('utf8');
+probe.stdout.on('data', (chunk) => {
+  probeOut += chunk;
+});
+probe.stderr.resume();
+const probeExit = await new Promise((resolveExit) => probe.on('exit', (code) => resolveExit(code)));
+let probeResult = null;
+try {
+  probeResult = JSON.parse(probeOut.trim());
+} catch {
+  // Reported as a failure below.
+}
+check(
+  'probeStatus gives up on an unresponsive owner',
+  probeExit === 0 &&
+    probeResult !== null &&
+    probeResult.elapsed < 5_000 &&
+    probeResult.connected === false,
+  `exit=${probeExit} out=${probeOut.trim().slice(0, 200)}`,
+);
+
+// ---------------------------------------------------------------------------
 
 const failed = results.filter((r) => !r.ok);
 process.stdout.write(`\n${results.length - failed.length}/${results.length} checks passed\n`);
