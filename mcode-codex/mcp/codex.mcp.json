@@ -39,7 +39,7 @@
               },
               "referenceImages": {
                 "type": "array",
-                "items": { type: "string" },
+                "items": { "type": "string" },
                 "description": "Up to five local PNG/JPEG/WebP paths to edit from, relative to the workspace."
               },
               "savePath": {
