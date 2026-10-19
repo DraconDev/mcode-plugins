@@ -1,0 +1,58 @@
+{
+  "$schema": "../../schemas/mcp-v1.schema.json",
+  "schemaVersion": 1,
+  "mcpServers": {
+    "codex": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "./server/main.mjs"
+      ],
+      "description": "ChatGPT subscription (Codex) image generation and editing, with automatic retry on rate limits and transient failures.",
+      "timeout": 900000,
+      "tools": [
+        {
+          "name": "status",
+          "description": "Check the Codex image plugin: whether the ChatGPT subscription credential is present and valid, which models and output formats are available, and the retry policy. Start here if a generation call fails.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "generate_image",
+          "description": "Generate an image with the ChatGPT subscription (Codex). Returns the image inline so you can see it, and can also save it to disk. Up to five reference images can be supplied to edit an existing picture. Rate limits and transient server errors are retried automatically.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "prompt": { "type": "string", "description": "What the image should show." },
+              "outputFormat": {
+                "type": "string",
+                "enum": ["png", "jpeg", "webp"],
+                "description": "Image format.",
+                "default": "png"
+              },
+              "model": {
+                "type": "string",
+                "description": "Model override. The backend normally selects the image model itself."
+              },
+              "referenceImages": {
+                "type": "array",
+                "items": { type: "string" },
+                "description": "Up to five local PNG/JPEG/WebP paths to edit from, relative to the workspace."
+              },
+              "savePath": {
+                "type": "string",
+                "description": "Optional path to also write the image to, relative to the workspace."
+              },
+              "maxRetries": { "type": "number", "description": "Override the retry count (default 15)." }
+            },
+            "required": ["prompt"],
+            "additionalProperties": false
+          }
+        }
+      ]
+    }
+  }
+}
