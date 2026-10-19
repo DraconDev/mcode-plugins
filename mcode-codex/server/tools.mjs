@@ -235,12 +235,6 @@ const TOOL_DEFS = [
         // relative path lands, so it can never redirect a read or a write
         // somewhere else.
         const baseDir = resolveBaseDir(args.baseDir, workspaceCwd);
-        const inputImages = await loadReferenceImages(
-          args.referenceImages ?? [],
-          baseDir,
-          workspaceCwd,
-        );
-        const outputFormat = args.outputFormat ?? 'png';
         // Resolved before the call, so a path that escapes the workspace is
         // refused without spending a generation.
         const target = args.savePath
@@ -251,6 +245,12 @@ const TOOL_DEFS = [
               label: 'savePath',
             })
           : null;
+        const inputImages = await loadReferenceImages(
+          args.referenceImages ?? [],
+          baseDir,
+          workspaceCwd,
+        );
+        const outputFormat = args.outputFormat ?? 'png';
 
         const image = await withRetry(
           () =>
