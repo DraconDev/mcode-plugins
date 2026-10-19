@@ -32,11 +32,14 @@ is enough. The environment variable wins when both are present.
 timeouts and dropped connections are retried; a server's `Retry-After` is honoured. 4xx responses
 are not retried — a bad request will not fix itself.
 
-## Relationship to pi
+## Where the code came from
 
 The media core is ported from [`pi-agnes-tools`](https://github.com/DraconDev/pi-agnes-tools)
 (MIT), so the same API, models and quirks apply in both agents. pi keeps its own text-model
 catalog; this plugin is media only.
+
+That is a note about where the code came from, not a runtime dependency — this plugin runs on its
+own, with node and nothing else.
 
 ## Paths
 

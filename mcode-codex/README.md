@@ -45,10 +45,13 @@ and Cloudflare challenges are not retried — they will not change.
 The subscription has its own quota, separate from the API credits the `matrix` connector uses, so
 a rate limit here does not block the other.
 
-## Relationship to pi
+## Where the code came from
 
 Ported from `pi-codex-image-gen` (npm). The request shape, headers and streaming protocol match
 the pi extension's, so the same account, quota and behaviour apply in both agents.
+
+That is a note about where the code came from, not a runtime dependency — this plugin runs on its
+own, with node and nothing else.
 
 ## Paths
 
