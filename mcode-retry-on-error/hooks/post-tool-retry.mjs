@@ -25,17 +25,33 @@
  * matches a transient signature. A successful command that happens to print
  * "429" is left alone.
  *
+ * Timing
+ * ------
+ * The runtime kills this hook at its 10s timeout, so the backoff delay is
+ * clamped to leave room for the output to be written. A delay that runs past
+ * the budget would be killed before the first byte of stdout, and the
+ * failure would be lost silently.
+ *
  * Environment
  * -----------
  *   MCODE_RETRY_DISABLED   set to 1 to turn the hook into a no-op
  *   MCODE_RETRY_DELAY_MS   base backoff before the retry instruction (default 0)
  */
 
-import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-import { isRetryableFailure, retryInstruction, textOf } from './transient.mjs';
+import { failureDetail, isRetryableFailure, retryInstruction, textOf } from './transient.mjs';
+
+/**
+ * How long the hook may sleep before it has to write its output.
+ *
+ * The runtime allows 10 000 ms and kills the hook there. The Stop hook
+ * clamps its own delay to the same budget; this one has to as well, or a
+ * long delay eats the whole allowance and the hook produces nothing.
+ */
+const HOOK_TIMEOUT_BUDGET_MS = 7_500;
 
 const DATA_DIR =
   process.env.PLUGIN_DATA ??
@@ -75,6 +91,45 @@ function loadAttempts(file) {
   } catch {
     return 0;
   }
+}
+
+/**
+ * Write the counter atomically.
+ *
+ * The hook runs after *every* tool call, so two calls can land at the same
+ * moment. A plain write is a read-modify-write that a concurrent call can
+ * lose, so the new value goes to a temporary file in the same directory and
+ * is renamed over the old one: a rename is atomic, so a reader never sees
+ * half a file and no update is lost.
+ */
+function saveAttempts(file, attempts) {
+  const temp = `${file}.${process.pid}.tmp`;
+  try {
+    mkdirSync(DATA_DIR, { recursive: true });
+    writeFileSync(temp, JSON.stringify({ attempts }), 'utf8');
+    renameSync(temp, file);
+  } catch {
+    // Not fatal — the attempt counter is only for the message.
+    try {
+      unlinkSync(temp);
+    } catch {
+      // The temporary file may never have been created.
+    }
+  }
+}
+
+/**
+ * Reset the counter.
+ *
+ * The counter is the attempt number of the failure the model is working on.
+ * A call that did not fail ends that failure, so the next one starts at
+ * attempt 1 again — a counter that only ever grows announces "attempt 10"
+ * for an operation the model has never tried, and pushes the model towards
+ * giving up.
+ */
+function resetAttempts(file) {
+  if (loadAttempts(file) <= 0) return;
+  saveAttempts(file, 0);
 }
 
 async function main() {
