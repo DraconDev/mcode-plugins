@@ -202,6 +202,21 @@ function findStaleMcodeProcesses(chunkPath) {
 }
 
 /**
+ * Format a timestamp in the local timezone.
+ *
+ * `ps` reports local time and `Date.parse` reads it as local time, so the
+ * value is already local — printing it through `toISOString` would silently
+ * shift it by the UTC offset.
+ */
+function formatLocal(date) {
+  const pad = (value) => String(value).padStart(2, '0');
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  );
+}
+
+/**
  * Tell the user about mcode processes that will not pick the patch up.
  */
 function warnAboutStaleMcode(chunkPath) {
@@ -210,19 +225,20 @@ function warnAboutStaleMcode(chunkPath) {
 
   const count = stale.length;
   const oldest = stale.reduce((min, p) => Math.min(min, p.startedAt), stale[0].startedAt);
-  const age = Math.max(0, Math.round((Date.now() - oldest) / 60000));
+  const minutes = Math.max(0, Math.round((Date.now() - oldest) / 60000));
+  const age =
+    minutes < 60
+      ? `${minutes} minute${minutes === 1 ? '' : 's'}`
+      : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 
   console.log('');
   console.log(
     `WARNING: ${count} mcode process${count === 1 ? '' : 'es'} ${count === 1 ? 'is' : 'are'} still running the old code.`,
   );
   for (const process of stale) {
-    const started = new Date(process.startedAt).toISOString().replace('T', ' ').slice(0, 19);
-    console.log(`  PID ${process.pid}  started ${started}`);
+    console.log(`  PID ${process.pid}  started ${formatLocal(new Date(process.startedAt))}`);
   }
-  console.log(
-    `  The oldest has been up for ${age} minute${age === 1 ? '' : 's'}.`,
-  );
+  console.log(`  The oldest has been up for ${age}.`);
   console.log('  They keep the old budget — 5 retries, about half a minute — until restarted.');
   console.log('  Quit those sessions and start mcode again to pick up the new policy.');
 }
