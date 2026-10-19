@@ -91,29 +91,6 @@ const trace = (...args) => {
   if (DEBUG) log('debug:', ...args);
 };
 
-function readEnvInt(name, fallback) {
-  const raw = process.env[name]?.trim();
-  if (!raw) return fallback;
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
-  return Math.floor(parsed);
-}
-
-function readEnvFloat(name, fallback) {
-  const raw = process.env[name]?.trim();
-  if (!raw) return fallback;
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
-  return Math.min(parsed, 100);
-}
-
-const BASE_DELAY_MS = readEnvInt('MCODE_RETRY_DELAY_MS', 5_000);
-const BACKOFF_MULTIPLIER = readEnvFloat('MCODE_RETRY_BACKOFF_MULTIPLIER', 2);
-const MAX_DELAY_MS = readEnvInt('MCODE_RETRY_MAX_DELAY_MS', 60_000);
-const MAX_RETRIES = readEnvInt('MCODE_RETRY_MAX_RETRIES', Number.POSITIVE_INFINITY);
-const MAX_DURATION_MS = readEnvInt('MCODE_RETRY_MAX_DURATION_MS', Number.POSITIVE_INFINITY);
-const DISABLED = process.env.MCODE_RETRY_DISABLED === '1';
-
 const DATA_DIR =
   process.env.PLUGIN_DATA ??
   join(process.env.MINIMAX_DATA_DIR ?? join(homedir(), '.minimax'), 'plugin-data', 'mcode-retry-on-error');
