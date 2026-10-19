@@ -18,5 +18,4 @@ bindings
 icon.webp
 package.json
 README.md
-
 LICENSE

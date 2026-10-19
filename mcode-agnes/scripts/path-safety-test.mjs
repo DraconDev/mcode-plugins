@@ -9,7 +9,7 @@
  *   node scripts/path-safety-test.mjs
  */
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -102,9 +102,26 @@ try {
       requests.length === 0,
       `${requests.length} request(s)`,
     );
+  }
+
+  // 2b. An escaping savePath does not touch a file it could reach.
+  {
+    requests.length = 0;
+    const secret = join(outside, 'secret.txt');
+    writeFileSync(secret, 'untouched');
+    const result = await generateImage.handler({
+      prompt: 'a stone',
+      savePath: '../outside/secret.txt',
+    });
+    check('a savePath next to the workspace is refused', result.isError === true, textOf(result));
     check(
-      'nothing was written outside the workspace',
-      !existsSync(join(root, '.ssh', 'authorized_keys')),
+      'the file outside the workspace is untouched',
+      readFileSync(secret, 'utf8') === 'untouched',
+    );
+    check(
+      'the refusal happens before any request',
+      requests.length === 0,
+      `${requests.length} request(s)`,
     );
   }
 
@@ -152,10 +169,10 @@ try {
     requests.length = 0;
     const result = await generateImage.handler({
       prompt: 'a stone',
-      savePath: 'hero.png',
+      savePath: 'other.png',
       baseDir: 'assets',
     });
-    const written = join(workspace, 'assets', 'hero.png');
+    const written = join(workspace, 'assets', 'other.png');
     check('a relative baseDir resolves inside the workspace', existsSync(written), written);
     check('the tool did not report an error', result.isError !== true, textOf(result));
   }
