@@ -18,7 +18,7 @@ import {
   requestImage,
 } from './codex.mjs';
 import { resolveCodexCredential } from './auth.mjs';
-import { fetchWithRetry } from './retry.mjs';
+import { withRetry } from './retry.mjs';
 
 const text = (value) => ({ content: [{ type: 'text', text: String(value) }] });
 
@@ -123,8 +123,8 @@ export function createTools({ workspaceCwd, sessionKey }) {
           const credential = await resolveCodexCredential();
           const inputImages = await loadReferenceImages(args.referenceImages ?? []);
 
-          const image = await fetchWithRetry(
-            async () =>
+          const image = await withRetry(
+            () =>
               requestImage({
                 token: credential.access,
                 accountId: credential.accountId,
