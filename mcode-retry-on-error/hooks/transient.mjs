@@ -16,29 +16,41 @@
  * a rate limit, and retrying it would waste the user's time and quota.
  */
 
-/** HTTP statuses that are worth trying again. */
-const RETRYABLE_STATUS = /\b(?:429|500|502|503|504|408)\b/;
-
-/** Signatures of a failure that a later attempt could get past. */
-const TRANSIENT_PATTERNS = [
-  /\b429\b/,
-  /\b5\d\d\b/,
+/**
+ * Strong transient signals.
+ *
+ * These are phrases that only appear when something is actually being reported
+ * as throttled, overloaded or unreachable. A bare number never qualifies — a
+ * command that prints "429 records" is not a rate limit — so the numeric
+ * forms live in the weak tier below and have to sit next to an error word.
+ */
+const STRONG_TRANSIENT = [
   /rate[\s_-]?limit/i,
   /too many requests/i,
-  /quota/i,
+  /\bquota\b/i,
   /overloaded/i,
-  /capacity/i,
   /temporarily unavailable/i,
   /service unavailable/i,
   /bad gateway/i,
   /gateway timeout/i,
   /timed? ?out/i,
-  /timeout/i,
+  /\btimeout\b/i,
   /ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE/i,
   /socket hang up/i,
   /fetch failed/i,
   /network error/i,
+  /\bHTTP\/\d(?:\.\d)?\s+(?:429|5\d\d)\b/i,
+  /\bHTTP\s+(?:429|5\d\d)\b/i,
+  /\bstatus(?:\s+code)?\s*[:=]\s*(?:429|5\d\d)\b/i,
 ];
+
+/**
+ * Weak transient signals: a bare HTTP status.
+ *
+ * These only count when the text also reads like a failure, so a failed
+ * command whose output happens to contain "503" is not mistaken for a 503.
+ */
+const WEAK_TRANSIENT = /\b(?:429|5\d\d|408)\b/;
 
 /**
  * Markers that a piece of text is reporting a *failure*, as opposed to
