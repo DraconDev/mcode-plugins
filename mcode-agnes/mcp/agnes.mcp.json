@@ -9,7 +9,7 @@
         "./server/main.mjs"
       ],
       "description": "Agnes AI image and video generation, with automatic retry on rate limits and transient failures.",
-      "timeout": 900000,
+      "timeout": 3600000,
       "tools": [
         {
           "name": "status",

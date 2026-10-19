@@ -277,6 +277,7 @@ node scripts/retry-test.mjs                        # the retry policy
 node scripts/workspace-test.mjs                    # the workspace directory resolver
 node scripts/mcp-server-test.mjs                   # the MCP stdio transport
 node scripts/install-script-test.mjs               # the plugin installer
+node scripts/credential-test.mjs                   # credential resolution, with and without pi
 node scripts/sync-shared.mjs --check               # shared modules in sync
 node mcode-chrome/scripts/server-mode-test.mjs     # standalone protocol round trip
 node mcode-chrome/scripts/regression-test.mjs      # redaction, tab groups, screenshots

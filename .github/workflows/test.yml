@@ -38,6 +38,9 @@ jobs:
       - name: Test the installer
         run: node scripts/install-script-test.mjs
 
+      - name: Test credential resolution
+        run: node scripts/credential-test.mjs
+
       - name: Check the shared modules are in sync
         run: node scripts/sync-shared.mjs --check
 
