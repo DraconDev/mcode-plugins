@@ -40,11 +40,11 @@
               "referenceImages": {
                 "type": "array",
                 "items": { "type": "string" },
-                "description": "Up to five local PNG/JPEG/WebP paths to edit from, relative to the workspace."
+                "description": "Up to five local PNG/JPEG/WebP paths to edit from. Use absolute paths: the plugin server runs with the home directory as its working directory."
               },
               "savePath": {
                 "type": "string",
-                "description": "Optional path to also write the image to, relative to the workspace."
+                "description": "Where to write the image. Use an ABSOLUTE path: the plugin server runs with the home directory as its working directory, not your workspace."
               },
               "maxRetries": { "type": "number", "description": "Override the retry count (default 15)." }
             },

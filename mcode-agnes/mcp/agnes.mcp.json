@@ -48,7 +48,7 @@
               },
               "savePath": {
                 "type": "string",
-                "description": "Optional path to also write the image to, relative to the workspace."
+                "description": "Where to write the image. Use an ABSOLUTE path: the plugin server runs with the home directory as its working directory, not your workspace."
               },
               "maxRetries": { "type": "number", "description": "Override the retry count (default 15)." }
             },
@@ -84,7 +84,7 @@
               "frameRate": { "type": "number", "description": "Frame rate, if the model accepts it." },
               "savePath": {
                 "type": "string",
-                "description": "Optional path to download the finished video to."
+                "description": "Where to download the video. Use an ABSOLUTE path: the plugin server runs with the home directory as its working directory, not your workspace."
               },
               "maxRetries": { "type": "number", "description": "Override the retry count (default 15)." }
             },
