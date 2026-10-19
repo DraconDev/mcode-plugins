@@ -45,6 +45,10 @@ they used to be terminal, which meant the turn died on the first response instea
 the reset. The goal runtime adds a second, longer-horizon layer: it parks the session as
 `Usage limited — Resume after provider access recovers` and resumes it when the provider allows.
 
+The raised budget only reaches sessions started after the patch — Node loads the bundle into memory
+at startup. If a rate limit still gives up in about half a minute, the session predates the patch;
+restart it, or check with `node scripts/apply-mcode-llm-retry-policy.mjs --check`.
+
 An authentication failure is still terminal, and that is deliberate — a bad credential will not
 fix itself, so waiting six hours for it is pointless.
 
