@@ -61,19 +61,8 @@ jobs:
 
       - name: Package each plugin
         run: |
-          mkdir -p dist
           for plugin in mcode-chrome mcode-agnes mcode-codex mcode-retry-on-error; do
-            # The same file set the installer copies, so the archive is
-            # installable on its own.
-            tar -czf "dist/${plugin}.tar.gz" \
-              --exclude='scripts' \
-              -C "$plugin" \
-              .minimax-plugin mcp server skills hooks icon.webp README.md 2>/dev/null \
-              || tar -czf "dist/${plugin}.tar.gz" -C "$plugin" \
-                   .minimax-plugin mcp server skills icon.webp README.md 2>/dev/null \
-              || tar -czf "dist/${plugin}.tar.gz" -C "$plugin" \
-                   .minimax-plugin mcp skills icon.webp README.md
-            echo "packed ${plugin}"
+            scripts/package-plugin.sh "$plugin" dist
           done
           ls -la dist/
 

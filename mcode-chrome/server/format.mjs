@@ -11,6 +11,12 @@
 const SECRET_KEY =
   /(api[_-]?key|apikey|token|secret|password|passwd|pwd|auth|bearer|session|cookie|set-cookie|authorization|x-api-key|private[_-]?key|client[_-]?secret|vault)/i;
 
+/**
+ * The key under which the companion extension stores a raw header block
+ * (`XMLHttpRequest.getAllResponseHeaders()`), e.g. "x-csrf-token: …\r\n".
+ */
+const HEADER_BLOCK_KEY = 'responseHeadersText';
+
 const MAX_TEXT = 20_000;
 
 export function compactLine(value, max = 120) {
