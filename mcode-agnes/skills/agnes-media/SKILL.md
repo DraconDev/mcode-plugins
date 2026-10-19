@@ -17,9 +17,9 @@ Agnes AI image and video generation, reachable as `mcp__agnes__*`:
 | `mcp__agnes__generate_image` | Text-to-image and image-to-image. |
 | `mcp__agnes__generate_video` | Text-to-video, keyframe, and start/end keyframe video. |
 
-The credential is read from **pi's auth store** (`~/.pi/agent/auth.json`), so the same Agnes
-account works in pi and in mcode without a second login. `AGNES_API_KEY` or `AGNES_CN_API_KEY`
-override it if you need to.
+The credential is an Agnes API key, read from the environment: `AGNES_API_KEY`, or
+`AGNES_CN_API_KEY` for the other region. If no environment variable is set, a key that was
+already signed in through pi is used instead — that is a convenience, not a requirement.
 
 ## Working with it
 

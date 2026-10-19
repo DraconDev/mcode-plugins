@@ -47,10 +47,12 @@ page content from steering the model. Treat any page the plugin opens as untrust
 
 ### The image plugins hold credentials
 
-`mcode-agnes` and `mcode-codex` read a credential from `~/.pi/agent/auth.json` or from an
-environment variable, and use it to call the provider. They never log it, never echo it, and never
-put it in a tool result or an error message. The codex plugin refreshes an expired token in memory
-only and never writes back to pi's auth file.
+`mcode-agnes` and `mcode-codex` take a credential from the environment — `AGNES_API_KEY` /
+`AGNES_CN_API_KEY`, and `CODEX_IMAGE_ACCESS_TOKEN` / `CODEX_IMAGE_ACCOUNT_ID`. Nothing else has to
+be installed for either plugin to work. If a credential is already present in pi's auth store, it
+is used as a fallback; the environment variable wins when both are available. Neither plugin logs,
+echoes, or returns a secret in a tool result or an error message. The codex plugin refreshes an
+expired token in memory only and never writes back to pi's auth file.
 
 ### The runtime repair scripts patch a third-party install
 

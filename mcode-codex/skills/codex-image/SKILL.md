@@ -17,9 +17,10 @@ ChatGPT subscription image generation, reachable as `mcp__codex__*`:
 | `mcp__codex__status` | Whether the subscription credential is present and valid, and the retry policy. |
 | `mcp__codex__generate_image` | Text-to-image, and image-to-image from up to five reference files. |
 
-The credential is the ChatGPT subscription OAuth token that pi already holds
-(`openai-codex` in `~/.pi/agent/auth.json`), so the same subscription works in pi and in
-mcode without a second sign-in. An expired token is refreshed in memory.
+The credential is the ChatGPT subscription OAuth token, read from `CODEX_IMAGE_ACCESS_TOKEN` in
+the environment. If that is not set, a credential already signed in through pi is used instead —
+that is a convenience, not a requirement. A token from pi's store is refreshed in memory when it
+expires.
 
 ## Working with it
 
