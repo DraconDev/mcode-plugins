@@ -540,6 +540,126 @@
       "w": 1536,
       "h": 2752,
       "size": 8200927
+    },
+    {
+      "file_name": "29_vineyard_rows_sunset.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 2752,
+      "h": 1536,
+      "size": 4455082
+    },
+    {
+      "file_name": "30_storm_plains_lightning.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 6022964
+    },
+    {
+      "file_name": "13_rice_terraces_mountains.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 8235228
+    },
+    {
+      "file_name": "11_misty_mountain_valley.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 5536790
+    },
+    {
+      "file_name": "14_northern_lights_fjord.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 3168,
+      "h": 1344,
+      "size": 3180773
+    },
+    {
+      "file_name": "12_desert_canyon_golden_hour.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7024929
+    },
+    {
+      "file_name": "19_savanna_acacia_sunset.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 6047501
+    },
+    {
+      "file_name": "16_volcanic_black_sand_coast.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 6390371
+    },
+    {
+      "file_name": "15_autumn_forest_road.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 9330427
+    },
+    {
+      "file_name": "20_foggy_pine_forest_aerial.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1536,
+      "h": 2752,
+      "size": 7747830
+    },
+    {
+      "file_name": "17_lavender_field_cypress.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7664921
+    },
+    {
+      "file_name": "18_glacier_lagoon_icebergs.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 6998988
+    },
+    {
+      "file_name": "42_mediterranean_white_village.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7609789
+    },
+    {
+      "file_name": "46_astronaut_red_planet.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7348974
+    },
+    {
+      "file_name": "45_street_market_umbrellas.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 9115550
     }
   ]
 }

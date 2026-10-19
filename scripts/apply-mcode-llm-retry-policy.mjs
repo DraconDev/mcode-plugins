@@ -52,12 +52,12 @@ const DEFAULT_POLICY = {
   maxRetryElapsedMs: 120000,
 };
 
-/** The policy this script installs — the same shape the image plugins use. */
+/** The policy this script installs. */
 const PATCHED_POLICY = {
-  maxRetries: 15,
+  maxRetries: 200,
   baseDelayMs: 1500,
-  maxDelayMs: 30000,
-  maxRetryElapsedMs: 900000,
+  maxDelayMs: 300000,
+  maxRetryElapsedMs: 21600000,
 };
 
 const KEYS = ['maxRetries', 'baseDelayMs', 'maxDelayMs', 'maxRetryElapsedMs'];
