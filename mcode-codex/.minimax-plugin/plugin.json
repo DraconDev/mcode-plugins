@@ -1,0 +1,24 @@
+{
+  "$schema": "../../../schemas/plugin-v1.schema.json",
+  "schemaVersion": 1,
+  "name": "mcode-codex",
+  "displayName": "MCode Codex Images",
+  "version": "1.0.0",
+  "description": "Generate and edit images with the ChatGPT subscription (Codex) from MiniMax Code, using the credential already stored for pi. Rate limits and transient failures are retried automatically.",
+  "author": "Dracon",
+  "icon": "icon.webp",
+  "category": "Productivity",
+  "exampleQueries": [
+    "Generate a kawaii mascot icon with my ChatGPT subscription.",
+    "Turn this photo into a flat vector illustration.",
+    "Make 40 species portraits in one locked style."
+  ],
+  "apps": [],
+  "mcpServers": [
+    "mcp/codex.mcp.json"
+  ],
+  "skills": [
+    "skills/codex-image/SKILL.md"
+  ],
+  "hostBindings": []
+}
