@@ -1,4 +1,16 @@
 {
+  "PostToolUse": [
+    {
+      "matcher": "*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node \"${PLUGIN_ROOT}/hooks/post-tool-retry.mjs\"",
+          "timeout": 10
+        }
+      ]
+    }
+  ],
   "Stop": [
     {
       "matcher": "*",

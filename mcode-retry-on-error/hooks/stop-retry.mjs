@@ -349,7 +349,7 @@ async function main() {
     reason = lastAssistant.errorMessage ?? lastAssistant.error ?? 'the turn ended with an error';
   } else if (lastToolResult?.isError) {
     const text = textOf(lastToolResult.content);
-    if (isTransient(text)) {
+    if (isRetryableFailure({ text, failed: true })) {
       kind = 'transient tool failure';
       reason = `${lastToolResult.toolName ?? 'tool'} failed: ${text.slice(0, 400)}`;
     }
