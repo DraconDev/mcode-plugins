@@ -19,7 +19,7 @@ the backstop.
 
 ## What is not covered
 
-**Provider-level errors are not this plugin's job, and no plugin can reach them.**
+**Provider-level errors never reach a plugin hook, so no plugin can retry them directly.**
 
 When the *model provider* rate-limits the request — the `The model provider is rate limiting
 requests. Code: 50150` error — the failure never reaches the session transcript and the `Stop`
@@ -28,16 +28,15 @@ hook never fires, because the run aborts before any turn completes. This was mea
 `stop`, and the provider error string appears in no transcript at all. Forcing a provider failure
 with an unreachable endpoint confirmed it: the run failed and the hook never ran.
 
-MiniMax Code handles that layer itself:
+MiniMax Code handles that layer itself, by retrying the provider request internally — but with a
+hardcoded budget of five retries, six attempts over about twenty seconds of waiting. That budget
+is not configurable, so `scripts/apply-mcode-llm-retry-policy.mjs` in the parent repository raises
+it to fifteen retries by patching the constant in the bundle. The goal runtime adds a second,
+longer-horizon layer on top: it parks the session as `Usage limited — Resume after provider access
+recovers` and picks it up again when the provider allows.
 
-- It retries the provider request internally — 5 attempts, 1 s base delay, 30 s cap, 2 minutes
-  total — and shows `Retrying model request · 3/5 · next in 1.2s`.
-- When those are exhausted it reports the error and points at `/retry`.
-- The goal runtime parks the session as `Usage limited — Resume after provider access recovers`
-  and picks it up again when the provider lets it.
-
-So a provider rate limit is retried by mcode, and this plugin covers the failures mcode cannot
-see: tool calls.
+So a provider rate limit is retried by mcode with a raised budget, and this plugin covers the
+failures mcode cannot see: tool calls.
 
 ## The hooks
 
