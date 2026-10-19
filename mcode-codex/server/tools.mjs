@@ -130,14 +130,15 @@ export function createTools({ workspaceCwd, sessionKey }) {
                 accountId: credential.accountId,
                 prompt: args.prompt,
                 model: args.model ?? DEFAULT_MODEL,
-                outputFormat: args.outputFormat ?? 'png',
+                outputFormat,
                 sessionId: sessionKey,
                 inputImages,
               }),
             retryOptions(args),
           );
 
-          const mimeType = `image/${args.outputFormat === 'jpeg' ? 'jpeg' : args.outputFormat}`;
+          const outputFormat = args.outputFormat ?? 'png';
+          const mimeType = `image/${outputFormat === 'jpeg' ? 'jpeg' : outputFormat}`;
           const blocks = [{ type: 'image', data: image.base64, mimeType }];
 
           if (args.savePath) {
