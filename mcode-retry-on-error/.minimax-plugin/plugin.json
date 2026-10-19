@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "name": "mcode-retry-on-error",
   "displayName": "MCode Retry On Error",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Automatically continue a MiniMax Code turn that ended in an error or a rate-limited tool call, with exponential backoff, instead of giving up.",
   "author": "Dracon",
   "icon": "icon.webp",
