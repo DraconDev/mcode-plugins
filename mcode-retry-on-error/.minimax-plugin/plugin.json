@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../schemas/plugin-v1.schema.json",
+  "schemaVersion": 1,
+  "name": "mcode-retry-on-error",
+  "displayName": "MCode Retry On Error",
+  "version": "1.0.0",
+  "description": "Automatically continue a MiniMax Code turn that ended in an error or a rate-limited tool call, with exponential backoff, instead of giving up.",
+  "author": "Dracon",
+  "icon": "icon.webp",
+  "category": "Productivity",
+  "exampleQueries": [
+    "Keep retrying the image generation until it succeeds.",
+    "If a tool call fails with a rate limit, just try again.",
+    "Don't stop on a transient provider error."
+  ],
+  "apps": [],
+  "mcpServers": [],
+  "skills": [
+    "skills/retry-on-error/SKILL.md"
+  ],
+  "hooks": [
+    "hooks/hooks.json"
+  ],
+  "hostBindings": []
+}
