@@ -286,6 +286,27 @@ export function isRetryableFailure({ text, failed, isPlainText = false }) {
 }
 
 /**
+ * Classify a turn error.
+ *
+ * A turn error is a failure report by construction: the runtime only sets
+ * `stopReason: "error"` when the turn failed, so the message does not have
+ * to carry a failure word of its own. It still needs a transient signature —
+ * a rejected credential, a content-filter refusal or a validation error is
+ * permanent, and retrying it only burns the turn.
+ *
+ * @param {string} text - the turn's error message
+ * @returns {boolean}
+ */
+export function isRetryableTurnError(text) {
+  if (!text) return false;
+  if (isTerminalFailure(text)) return false;
+  // The weak tier needs a failure word next to a bare status code. The turn
+  // error *is* one, so the message is labelled as the error report it is
+  // before it goes through the same classifier the tool branch uses.
+  return isRetryableFailure({ text: `Error: ${text}`, failed: true });
+}
+
+/**
  * The part of a failure worth showing the model.
  *
  * The cause of a failure sits at the *start* of a response — the status line,

@@ -70,7 +70,7 @@ import {
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-import { isRetryableFailure, textOf } from './transient.mjs';
+import { failureDetail, isRetryableFailure, isRetryableTurnError, textOf } from './transient.mjs';
 
 const HOOK_TIMEOUT_BUDGET_MS = 7_500;
 const TAIL_BYTES = 256 * 1024;
@@ -292,9 +292,15 @@ function saveState(file, state) {
   }
 }
 
-function clearState(file) {
+/**
+ * Reset the retry episode.
+ *
+ * The turn bookkeeping is kept: a clean turn ends the failure episode, not
+ * the turn, and the turn's continuation count is what bounds the loop.
+ */
+function clearState(file, keep = {}) {
   try {
-    writeFileSync(file, JSON.stringify({ attempts: 0, firstAttemptAt: 0 }), 'utf8');
+    writeFileSync(file, JSON.stringify({ attempts: 0, firstAttemptAt: 0, ...keep }), 'utf8');
   } catch {
     // Not fatal.
   }
@@ -385,7 +391,16 @@ async function main() {
   }
 
   const { file, state } = loadState(sessionId);
-  const lastToolResult = [...messages].reverse().find((message) => message.role === 'toolResult');
+
+  // Only a tool result from the *current* turn can fail it. A tool result
+  // that comes before the last assistant message belongs to a step the
+  // model has already recovered from — it produced its final answer after
+  // that failure — and retrying it would repeat an operation that already
+  // succeeded: the side effects happen twice and the turn cannot end.
+  const currentTurn = messages.slice(lastAssistantIndex + 1);
+  const lastToolResult = [...currentTurn]
+    .reverse()
+    .find((message) => message.role === 'toolResult');
 
   // Aborted means the user cancelled — never retry that.
   if (lastAssistant.stopReason === 'aborted') {
@@ -397,19 +412,31 @@ async function main() {
   let kind = null;
 
   if (lastAssistant.stopReason === 'error') {
-    kind = 'turn error';
-    reason = lastAssistant.errorMessage ?? lastAssistant.error ?? 'the turn ended with an error';
+    // A turn error goes through the same classifier as a tool failure. A
+    // permanent cause — a rejected credential, a content-filter refusal —
+    // must not be retried, and the reason must not claim a transient
+    // failure that was never found.
+    const text =
+      lastAssistant.errorMessage ?? lastAssistant.error ?? 'the turn ended with an error';
+    if (isRetryableTurnError(text)) {
+      kind = 'turn error';
+      reason = text;
+    }
   } else if (lastToolResult?.isError) {
     const text = textOf(lastToolResult.content);
     if (isRetryableFailure({ text, failed: true })) {
       kind = 'transient tool failure';
-      reason = `${lastToolResult.toolName ?? 'tool'} failed: ${text.slice(0, 400)}`;
+      reason = `${lastToolResult.toolName ?? 'tool'} failed: ${failureDetail(text, 400)}`;
     }
   }
 
   if (!reason) {
-    // Clean turn: reset the counters so the next failure starts fresh.
-    if (state.attempts) clearState(file);
+    // Clean turn: reset the retry episode so the next failure starts fresh.
+    // The turn's continuation count survives — the turn is not over, only
+    // this failure episode is.
+    if (state.attempts) {
+      clearState(file, { turnId: state.turnId, continuations: state.continuations });
+    }
     return;
   }
 
@@ -417,14 +444,34 @@ async function main() {
   const attempts = (state.attempts ?? 0) + 1;
   const firstAttemptAt = state.firstAttemptAt || now;
 
+  // The runtime sets `stop_hook_active` when it re-enters the hook because a
+  // previous Stop block already continued this turn, and it allows eight
+  // such continuations per turn. Honouring the flag means the plugin's own
+  // budget is what ends the loop: a re-entry has to be inside the budget,
+  // and the continuations granted inside one turn are counted apart from
+  // the retry episode, so a turn that recovers and then fails again does
+  // not get a fresh budget every time.
+  const turnId = String(payload.turn_id ?? payload.turnId ?? '');
+  const continuations = turnId && state.turnId === turnId ? (state.continuations ?? 0) : 0;
+  const nextContinuations = continuations + 1;
+
   if (Number.isFinite(MAX_RETRIES) && attempts > MAX_RETRIES) {
     log(`giving up after ${attempts - 1} retries (MCODE_RETRY_MAX_RETRIES)`);
-    clearState(file);
+    clearState(file, { turnId, continuations });
     return;
   }
   if (Number.isFinite(MAX_DURATION_MS) && now - firstAttemptAt > MAX_DURATION_MS) {
     log(`giving up after ${Math.round((now - firstAttemptAt) / 1000)}s (MCODE_RETRY_MAX_DURATION_MS)`);
-    clearState(file);
+    clearState(file, { turnId, continuations });
+    return;
+  }
+  if (
+    payload.stop_hook_active === true &&
+    Number.isFinite(MAX_CONTINUATIONS) &&
+    nextContinuations > MAX_CONTINUATIONS
+  ) {
+    log(`giving up after ${nextContinuations - 1} continuations in this turn`);
+    clearState(file, { turnId, continuations });
     return;
   }
 
@@ -434,7 +481,13 @@ async function main() {
   );
   const delay = Math.min(wantedDelay, HOOK_TIMEOUT_BUDGET_MS);
 
-  saveState(file, { attempts, firstAttemptAt, lastDelayMs: wantedDelay });
+  saveState(file, {
+    attempts,
+    firstAttemptAt,
+    lastDelayMs: wantedDelay,
+    turnId,
+    continuations: nextContinuations,
+  });
 
   if (delay > 0) await sleep(delay);
 
