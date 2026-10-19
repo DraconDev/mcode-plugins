@@ -257,7 +257,7 @@ async function runHook(payload, { env = {} } = {}) {
 // 15. A bare status next to an error word still counts.
 {
   const { parsed } = await runHook({
-    tool_response: 'upstream responded 503 while fetching the model',
+    tool_response: 'Error: upstream responded 503 while fetching the model',
   });
   check(
     'a bare status beside an error word is transient',
