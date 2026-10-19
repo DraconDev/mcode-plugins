@@ -260,6 +260,21 @@ async function main() {
   for await (const chunk of process.stdin) chunks.push(chunk);
   const payload = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
 
+  // Diagnostic escape hatch: force a block on every Stop, to verify that the
+  // hook is wired up end to end. Checked before anything else so it cannot be
+  // short-circuited by an unexpected transcript shape.
+  if (process.env.MCODE_RETRY_FORCE_BLOCK === '1') {
+    process.stdout.write(
+      `${JSON.stringify({
+        decision: 'block',
+        reason:
+          'MCODE_RETRY_FORCE_BLOCK is set. The retry hook fired successfully. ' +
+          'Unset the variable to disable this diagnostic.',
+      })}\n`,
+    );
+    return;
+  }
+
   const sessionId = payload.session_id ?? payload.sessionId;
   if (!sessionId) {
     trace('no session id in payload');
