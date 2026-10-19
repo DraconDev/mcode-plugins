@@ -85,6 +85,12 @@ export function createTools({ workspaceCwd }) {
           '- retry: 15 attempts, exponential backoff from 1.5s, each a little later; ' +
             '429/5xx/timeouts are retried, 4xx is not',
         );
+        lines.push(`- server cwd: ${workspaceCwd}`);
+        lines.push(
+          `- workspace env: ${Object.keys(process.env)
+            .filter((key) => /WORKSPACE|CWD|PROJECT|MAVIS|MINIMAX/i.test(key))
+            .join(', ') || '(none)'}`,
+        );
         return text(lines.join('\n'));
       },
     },
