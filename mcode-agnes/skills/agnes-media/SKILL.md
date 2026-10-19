@@ -25,10 +25,10 @@ override it if you need to.
 
 1. `generate_image` returns the image **inline**, so you can look at it. Say what you see rather
    than describing the prompt back.
-2. Pass `savePath` when the image is an asset that should land in the repository. Use an
-   **absolute** path (for example `/home/you/project/assets/hero.png`). The plugin server's
-   working directory is the home directory, not the workspace, so a relative path would land in
-   the wrong place. `baseDir` can supply a base for relative paths, but absolute is simpler.
+2. Pass `savePath` when the image is an asset that should land in the repository. A relative
+   path resolves against the agent's workspace, so `assets/hero.png` lands in
+   `<workspace>/assets/hero.png`. An absolute path is unambiguous and preferred when you know it.
+   `baseDir` overrides the base directory for a relative path.
 3. `size` and `ratio` are separate fields; set the one the request actually calls for.
 4. For image-to-image, pass `images` as URLs, not local paths. The API fetches them itself.
 5. For video: one reference image is a keyframe, two are start and end keyframes. The

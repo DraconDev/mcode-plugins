@@ -93,11 +93,10 @@ The bridge trusts any local process, so the gate lives here:
 
 ## File paths
 
-`screenshot` (`path`) and `upload_file` (`paths`) take local filesystem paths. Use **absolute**
-paths, for example `/home/you/project/shots/page.png`. The plugin server is spawned with the
-home directory as its working directory, not the agent's workspace, so a relative path resolves
-against the wrong place. Both tools also accept `baseDir` to anchor a relative path, but absolute
-paths are simpler and unambiguous.
+`screenshot` (`path`) and `upload_file` (`paths`) take local filesystem paths. A relative path
+resolves against the agent's workspace, so `shots/page.png` lands in `<workspace>/shots/page.png`.
+An absolute path is unambiguous and preferred when you know it. Both tools also accept
+`baseDir` to anchor a relative path to a different directory.
 
 ## Secrets and sensitive pages
 

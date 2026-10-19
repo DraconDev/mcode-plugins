@@ -24,12 +24,12 @@ mcode without a second sign-in. An expired token is refreshed in memory.
 ## Working with it
 
 1. The image comes back **inline**, so look at it and say what you actually see.
-2. Pass `savePath` for anything that should land in the repository. Use an **absolute** path
-   (for example `/home/you/project/assets/hero.png`). The plugin server's working directory is
-   the home directory, not the workspace, so a relative path would land in the wrong place.
-   `baseDir` can supply a base for relative paths, but absolute is simpler.
-3. `referenceImages` takes **local paths** (PNG, JPEG or WebP), not URLs. Up to five. Use
-   absolute paths here too, for the same reason.
+2. Pass `savePath` for anything that should land in the repository. A relative path resolves
+   against the agent's workspace, so `assets/hero.png` lands in `<workspace>/assets/hero.png`.
+   An absolute path is unambiguous and preferred when you know it. `baseDir` overrides the base
+   directory for a relative path.
+3. `referenceImages` takes **local paths** (PNG, JPEG or WebP), not URLs. Up to five. Relative
+   paths resolve against the workspace the same way.
 4. For a transparent background, say so in the prompt explicitly — "TRANSPARENT background, true
    alpha channel" — and check the result before shipping it.
 5. For a batch, call the tool once per image with the same style guide in each prompt. A single
