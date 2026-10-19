@@ -169,6 +169,13 @@ const FAILURE_PATTERNS = [
   /\btraceback\b/i,
   /\bENOENT\b/,
   /\bEACCES\b/,
+  // A network failure is a failure report on its own: the errno name and
+  // the socket message say what happened without any other error word.
+  /\b(?:ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE)\b/,
+  /socket hang up/i,
+  // A limit that was hit is a failure report too. The phrasing is kept
+  // narrow — a sentence that merely mentions a limit is not one.
+  /\brate[_\s-]?limit[_\s-]?(?:exceeded|exhausted|hit|reached)\b/i,
   // An HTTP error response is a failure on its own. The status code has to be
   // paired with a reason phrase, so a successful command that happens to print
   // "429" is not mistaken for one.
