@@ -10,8 +10,8 @@ script, and the plugins are installed.
 | Plugin | What it does |
 | --- | --- |
 | [`mcode-chrome/`](mcode-chrome/) | Drive the user's **real, signed-in Chrome** — real logins, real tabs, the tab already open. 23 tools. |
-| [`mcode-agnes/`](mcode-agnes/) | Agnes AI image and video generation, using the credential pi already holds. 3 tools. |
-| [`mcode-codex/`](mcode-codex/) | ChatGPT-subscription (Codex) image generation and editing, using the credential pi already holds. 2 tools. |
+| [`mcode-agnes/`](mcode-agnes/) | Agnes AI image and video generation. Set one environment variable. 3 tools. |
+| [`mcode-codex/`](mcode-codex/) | ChatGPT-subscription (Codex) image generation and editing. Set one environment variable. 2 tools. |
 | [`mcode-retry-on-error/`](mcode-retry-on-error/) | Continue a turn that ended in an error or a rate-limited tool call, with backoff. Hook-based, no tools. |
 
 ---
@@ -63,18 +63,37 @@ the installed copy in place.
 
 ## Credentials
 
-`mcode-agnes` and `mcode-codex` read the credential **pi already has**, from `~/.pi/agent/auth.json`:
+Only the two image plugins need a credential. Each one takes an environment variable, and that is
+all it needs — **no other tool has to be installed**:
 
-| Plugin | Key in pi's store | Environment override |
+| Plugin | Environment variable | What it is |
 | --- | --- | --- |
-| `mcode-agnes` | `agnes` | `AGNES_API_KEY`, `AGNES_CN_API_KEY` |
-| `mcode-codex` | `openai-codex` | `CODEX_IMAGE_ACCESS_TOKEN`, `CODEX_IMAGE_ACCOUNT_ID` |
+| `mcode-agnes` | `AGNES_API_KEY` or `AGNES_CN_API_KEY` | your Agnes API key (the two cover the two Agnes regions) |
+| `mcode-codex` | `CODEX_IMAGE_ACCESS_TOKEN` | the ChatGPT subscription's image OAuth access token. Add `CODEX_IMAGE_ACCOUNT_ID` if you want to be explicit about the account. |
 
-One login, two agents. The codex plugin refreshes an expired token **in memory only** and never
-writes back to pi's auth file, so it cannot corrupt another tool's state. If you would rather not
-use pi's store, set the environment variable instead — the plugin prefers it.
+```bash
+export AGNES_API_KEY="…"
+export CODEX_IMAGE_ACCESS_TOKEN="…"
+```
 
-`mcode-chrome` needs no credential of its own; it uses the session your Chrome extension already has.
+Put them wherever you already keep environment variables — a shell profile, `direnv`, your
+session manager. The plugin reads them at call time, so there is nothing to configure and no
+restart to do.
+
+### Sharing a login with pi
+
+If you already use [pi](https://github.com/tianrendong/pi) and have signed in to Agnes or to the
+Codex image provider there, these plugins will pick that credential up on their own from pi's auth
+store (`~/.pi/agent/auth.json`) — one login, two agents, no environment variable to set. **pi is
+not required**; the store is a convenience, not a dependency. When both are available the
+environment variable wins.
+
+The codex plugin refreshes an expired token **in memory only** and never writes back to pi's auth
+file, so it cannot corrupt another tool's state. A token you supply yourself is never refreshed —
+supply a fresh one when it expires.
+
+`mcode-chrome` needs no credential of its own; it uses the session your Chrome extension already
+has.
 
 ## The plugins
 
