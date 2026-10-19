@@ -108,6 +108,14 @@ const QUOTA_GUARD = new RegExp(
 );
 
 /**
+ * The original guard, kept so `--revert` can put it back exactly.
+ */
+const QUOTA_GUARD_SOURCE =
+  'if(t.explicitAbort||t.signals.has("usage_limit")||t.signals.has("credits_exhausted")' +
+  '||t.signals.has("content_filter")||t.signals.has("refusal")||n==="abort"||n==="usage_limit"' +
+  '||n==="credits_exhausted"||n==="auth")return{retryable:!1,reason:n};';
+
+/**
  * The replacement: a spent quota or exhausted credits becomes retryable, and
  * the genuinely terminal cases stay terminal.
  */
@@ -268,16 +276,18 @@ if (checkOnly) {
 
 if (revert) {
   let source = found.source;
-  if (guardPatched) {
-    source = source.replace(QUOTA_GUARD, QUOTA_GUARD_SOURCE);
-    console.log('reverted: a spent quota and exhausted credits are terminal again');
-  }
+  // The policy literal sits after the classifier guard, so replacing it first
+  // leaves the guard's offsets intact.
   if (!isDefault) {
     source =
       source.slice(0, found.match.start) +
       formatPolicy(DEFAULT_POLICY) +
       source.slice(found.match.end);
     console.log(`reverted retry budget to: ${formatPolicy(DEFAULT_POLICY)}`);
+  }
+  if (guardPatched) {
+    source = source.replace(QUOTA_GUARD, QUOTA_GUARD_SOURCE);
+    console.log('reverted: a spent quota and exhausted credits are terminal again');
   }
   if (source !== found.source) {
     writeFileSync(found.path, source);
