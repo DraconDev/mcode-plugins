@@ -220,12 +220,12 @@ async function runHook(payload, { env = {} } = {}) {
 {
   const { parsed } = await runHook({
     tool_name: 'read',
-    tool_response: JSON.stringify({
+    tool_response: {
       content: [{ type: 'text', text: 'echo "HTTP 429 Too Many Requests"\nexit 7\n' }],
       numLines: 2,
       startLine: 1,
       totalLines: 2,
-    }),
+    },
   });
   check(
     'a read of a 429-mentioning file is not a failure',
