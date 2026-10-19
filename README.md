@@ -101,22 +101,20 @@ node scripts/apply-mcode-rm-shim-fix.mjs --check   # report only, no writes
 `mcode update` replaces the bundle wholesale, so re-run the script afterwards. The script is
 idempotent and safe to run at any time.
 
-## Known gap: local plugin hooks do not fire in 0.6.12
+## Known gap: none outstanding
 
-`mcode-retry-on-error` installs a `Stop` hook that blocks a failed turn and feeds a retry
-instruction back to the model. The hook logic is complete and covered by
-`mcode-retry-on-error/scripts/hook-test.mjs` (8/8), and the plugin loads — its skill appears in
-the session catalog.
+The `mcode-retry-on-error` plugin installs a `Stop` hook that blocks a failed turn and feeds a
+retry instruction back to the model. It works: the hook runs on every turn end, and its
+`{"decision": "block", "reason": "..."}` output arrives at the model wrapped in
+`<plugin-hook-context>`, which continues the turn.
 
-But mcode 0.6.12 parses the hook declaration and never dispatches it. Verified against both
-plugin manifest formats (`.minimax-plugin/plugin.json` and `.claude-plugin/plugin.json`) and
-across three hook events (`SessionStart`, `PostToolUse`, `Stop`): the hook process is never
-spawned, so the plugin's data directory is never even created. Skills, MCP servers and icons from
-the same plugin load normally, so it is specifically hook dispatch that is inert for local plugins.
+One thing is easy to get wrong when working on it: the hook's data directory is
+`~/.minimax/v2/plugin-data/hooks/<plugin-name>/`, **not** a `.plugin-data` folder next to the
+plugin. Configuration and state live there, and the heartbeat log in that directory is how you
+confirm the hook is running.
 
-Until that is fixed upstream, the retry behaviour the plugins actually provide is the call-level
-one in `shared/retry.mjs`, which needs no hook support. The hook plugin is kept because its logic
-is correct and it will start working the moment dispatch is fixed — no change required here.
+The retry behaviour that does *not* need any hook support is the call-level one in
+`shared/retry.mjs`, used by the image plugins.
 
 ## Conventions
 

@@ -15,36 +15,18 @@ transcript and decides:
 | The turn completed cleanly | Reset the counters so the next failure starts from attempt one. |
 
 The MiniMax Code plugin hook format is Claude-Code compatible, and the `Stop` event supports
-`{"decision": "block", "reason": "..."}`, which does not end the turn — it continues it. That is a
-continuation rather than a replay of the user's prompt, so side effects from earlier tool calls
-are not repeated blindly.
-
-## Known gap
-
-**mcode 0.6.12 does not dispatch hooks declared by local plugins.** The plugin loads — its skill
-appears in the session catalog — but the hook process is never spawned, so this plugin currently
-has no effect.
-
-Verified against both plugin manifest formats (`.minimax-plugin/plugin.json` and
-`.claude-plugin/plugin.json`) and across three hook events (`SessionStart`, `PostToolUse`,
-`Stop`): the plugin's data directory is never created, which is the earliest observable sign that
-the hook runner did not run. Skills, MCP servers and icons from the same plugin load normally, so
-it is specifically hook dispatch that is inert for local plugins.
-
-The hook logic is complete and covered by `scripts/hook-test.mjs` (8/8). It is kept because the
-logic is correct and it will start working the moment upstream dispatch is fixed — no change is
-needed here.
-
-The retry behaviour that *does* work today is the call-level one in `shared/retry.mjs`, used by
-the image plugins.
+`{"decision": "block", "reason": "..."}`, which does not end the turn — it continues it. The
+reason arrives at the model wrapped in `<plugin-hook-context>`. That is a continuation rather
+than a replay of the user's prompt, so side effects from earlier tool calls are not repeated
+blindly.
 
 ## Configuration
 
 MiniMax Code gives a hook process a whitelisted environment, so shell variables never reach this
-script. Configuration lives in a file:
+script. Configuration lives in a file, in the plugin's data directory:
 
 ```
-~/.minimax/plugins/.plugin-data/mcode-retry-on-error/config.json
+~/.minimax/v2/plugin-data/hooks/mcode-retry-on-error/config.json
 ```
 
 ```json
@@ -54,18 +36,29 @@ script. Configuration lives in a file:
   "backoffMultiplier": 2,
   "maxDelayMs": 60000,
   "maxRetries": null,
-  "maxDurationMs": null
+  "maxDurationMs": null,
+  "debug": false,
+  "forceBlock": false
 }
 ```
 
-`maxRetries` and `maxDurationMs` are `null` by default, meaning unlimited. `forceBlock: true` is
-a diagnostic that blocks every turn, to check the hook is wired up.
+`maxRetries` and `maxDurationMs` are `null` by default, meaning unlimited. `debug: true` appends
+a heartbeat line to `heartbeat.log` in the same directory on every turn end, which is how you
+confirm the hook is running. `forceBlock: true` blocks every turn end (three times, then stops) —
+a diagnostic to check the block reaches the model.
+
+The environment variables `MCODE_RETRY_DELAY_MS`, `MCODE_RETRY_MAX_RETRIES`,
+`MCODE_RETRY_MAX_DURATION_MS`, `MCODE_RETRY_DISABLED` and `MCODE_RETRY_DEBUG` are also honoured,
+but only when the hook is run by hand — mcode does not pass the shell environment through.
 
 ## Test
 
 ```bash
 node scripts/hook-test.mjs
 ```
+
+The test builds a throwaway session transcript and feeds the hook the same payload shape mcode
+sends, covering every decision the hook can make.
 
 ## Licence
 
