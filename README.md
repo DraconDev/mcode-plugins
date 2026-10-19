@@ -96,6 +96,7 @@ node mcode-codex/scripts/smoke-test.mjs            # status only, no credits spe
 node mcode-codex/scripts/smoke-test.mjs --generate # also generate one real image
 node mcode-retry-on-error/scripts/hook-test.mjs    # the Stop hook decisions
 node mcode-retry-on-error/scripts/post-tool-hook-test.mjs # the PostToolUse decisions
+node scripts/verify-mcode-retry-classifier.mjs      # the installed provider classifier
 ```
 
 Regenerate the plugin manifests after changing any tool definition:
