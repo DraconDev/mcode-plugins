@@ -68,6 +68,19 @@ const PATCHED_POLICY = {
   maxRetryElapsedMs: 21600000,
 };
 
+/**
+ * Policies this script is willing to overwrite.
+ *
+ * The default is MiniMax Code's. The second is the shorter window this
+ * script installed before the budget was widened to cover a multi-hour quota
+ * reset, so the script can move between them without a manual revert.
+ */
+const KNOWN_POLICIES = [
+  DEFAULT_POLICY,
+  { maxRetries: 15, baseDelayMs: 1500, maxDelayMs: 30000, maxRetryElapsedMs: 900000 },
+  PATCHED_POLICY,
+];
+
 const KEYS = ['maxRetries', 'baseDelayMs', 'maxDelayMs', 'maxRetryElapsedMs'];
 
 const checkOnly = process.argv.includes('--check');

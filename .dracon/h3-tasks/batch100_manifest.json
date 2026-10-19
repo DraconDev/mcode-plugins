@@ -876,6 +876,182 @@
       "w": 1792,
       "h": 2400,
       "size": 3000709
+    },
+    {
+      "file_name": "59_woven_textile_pattern.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2400,
+      "h": 1792,
+      "size": 8764176
+    },
+    {
+      "file_name": "60_topographic_contour_lines.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 6598883
+    },
+    {
+      "file_name": "73_violinist_street.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 8516843
+    },
+    {
+      "file_name": "74_diver_underwater.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1792,
+      "h": 2400,
+      "size": 5894526
+    },
+    {
+      "file_name": "75_child_with_kite.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 2752,
+      "h": 1536,
+      "size": 3809950
+    },
+    {
+      "file_name": "77_coffee_crema.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 6967650
+    },
+    {
+      "file_name": "76_frost_crystals_glass.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 8077996
+    },
+    {
+      "file_name": "78_butterfly_wing_scales.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 6683891
+    },
+    {
+      "file_name": "79_rusted_key.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 6752208
+    },
+    {
+      "file_name": "80_raindrop_on_leaf.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 5371380
+    },
+    {
+      "file_name": "81_eye_macro_iris.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 7385872
+    },
+    {
+      "file_name": "82_salt_crystals.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 6885973
+    },
+    {
+      "file_name": "84_soap_bubble.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 5147562
+    },
+    {
+      "file_name": "83_fabric_threads.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 2048,
+      "h": 2048,
+      "size": 3144037
+    },
+    {
+      "file_name": "85_cracked_paint_texture.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 9627590
+    },
+    {
+      "file_name": "86_ramen_bowl_top_view.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 7043523
+    },
+    {
+      "file_name": "87_bread_and_butter.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2400,
+      "h": 1792,
+      "size": 6565010
+    },
+    {
+      "file_name": "89_chocolate_mousse.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1792,
+      "h": 2400,
+      "size": 5117351
+    },
+    {
+      "file_name": "88_citrus_sliced_macro.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2048,
+      "h": 2048,
+      "size": 5871945
+    },
+    {
+      "file_name": "90_seafood_platter.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 8472801
+    },
+    {
+      "file_name": "91_snow_leopard.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 1792,
+      "h": 2400,
+      "size": 3591414
+    },
+    {
+      "file_name": "92_owl_in_flight.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7748476
     }
   ]
 }
