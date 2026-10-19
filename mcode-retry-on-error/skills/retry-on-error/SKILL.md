@@ -2,25 +2,25 @@
 name: retry-on-error
 description: >-
   Guidance for the mcode-retry-on-error plugin, which automatically continues a MiniMax Code turn
-  that ended in a provider error or a rate-limited tool call instead of giving up. Use when a
+  that ended in an error or a rate-limited tool call instead of giving up. Use when a
   transient failure should be retried rather than reported, when an image or video generation hit
   a quota, or when the user asks to keep trying until something succeeds.
 ---
 
 # Retry On Error
 
-This plugin installs a `Stop` hook. When a turn ends in a provider error, or the last thing that
-happened was a tool call that failed with a transient error — a rate limit, a quota, a timeout, a
-5xx, a dropped connection — the hook blocks the turn from ending and feeds a retry instruction
-back to the model. The model then repeats the same operation.
+This plugin installs two hooks. The `PostToolUse` hook fires the instant a tool fails and feeds a
+retry instruction back to the model. The `Stop` hook catches a turn that tried to end in an error,
+or a turn where the last tool call failed transiently and the model gave up anyway. Either way the
+model repeats the same operation.
 
 You do not have to do anything special for this to happen. It is automatic.
 
 ## What gets retried
 
-- **Provider errors.** The turn ended with `stopReason: "error"`.
-- **Transient tool failures.** The last tool result was an error whose text matches a rate limit,
-  quota, timeout, 5xx, or network pattern. A 429 from an image API is the common case.
+- **Transient tool failures.** A tool result that reports a failure whose text matches a rate
+  limit, quota, timeout, 5xx, or network pattern. A 429 from an image API is the common case.
+- **Turn errors.** The turn ended with `stopReason: "error"`.
 
 ## What is never retried
 
@@ -30,6 +30,21 @@ You do not have to do anything special for this to happen. It is automatic.
 - **After the user interjects.** A new user message resets the retry state, so the loop always
   yields to the human.
 - **A clean turn.** Success resets the counters, so the next failure starts from attempt one.
+
+## What this plugin cannot reach
+
+**Provider rate limits are handled by MiniMax Code itself, not by this plugin.** The
+`The model provider is rate limiting requests. Code: 50150` error never reaches the session
+transcript, and the `Stop` hook does not fire for it — the run aborts before a turn completes.
+
+MiniMax Code already retries that layer: it retries the provider request internally (5 attempts,
+2 minutes), reports `Retrying model request · 3/5` while it does, and then points at `/retry`. The
+goal runtime parks the session as `Usage limited — Resume after provider access recovers` and
+resumes it when the provider allows.
+
+So if you see that error, do not try to work around it by hand and do not change your approach.
+The recovery is already running. If the turn genuinely ended and the user asks you to continue,
+say what you were doing and pick it up again.
 
 ## How to work with it
 
@@ -41,6 +56,11 @@ it as an instruction to repeat the *same* operation:
 - Do **not** apologise or explain that you are retrying; just make the call again.
 - If the failure is a rate limit, the same call is the right call. The plugin is already spacing
   attempts out with exponential backoff.
+
+The same instruction arrives inside a tool result when a tool fails mid-turn. Treat it the same
+way — but check the result you actually got. If the tool succeeded and the suggestion was based
+on text that merely looked like a failure, carry on rather than repeating a command that
+already worked.
 
 If the plugin is not doing what you expect, say so plainly rather than looping by hand — the
 plugin's own backoff is already better than a manual retry loop.
@@ -68,7 +88,8 @@ reach it:
 ```
 
 `maxRetries` and `maxDurationMs` are `null` by default, meaning unlimited. `debug: true` appends
-a heartbeat line to `heartbeat.log` in the same directory on every turn end.
+a heartbeat line to `heartbeat.log` on every turn end and to `post-tool-heartbeat.log` on every
+tool call.
 
 Because the hook itself has a 10-second execution budget, a delay longer than that is trimmed to
 fit and the remainder is handed back to the model as a note. Tools that own their own retry
@@ -83,3 +104,6 @@ policy — the image and video generators — apply the full backoff themselves.
   started after enabling it. Set `"debug": true` and look at
   `~/.minimax/v2/plugin-data/hooks/mcode-retry-on-error/heartbeat.log` — a line per turn end means
   the hook is running.
+- **A tool call was retried that should not have been.** The hook reads the tool result, not the
+  tool's own error flag, because MiniMax Code strips that flag from the `PostToolUse` payload.
+  `post-tool-heartbeat.log` shows exactly what the hook saw.
