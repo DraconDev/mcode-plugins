@@ -40,6 +40,8 @@ directory mcode was launched from — because MiniMax Code spawns plugin MCP ser
 directory as their working directory and passes no workspace path in the environment. An absolute
 path is unambiguous and preferred; `baseDir` overrides the base directory for a relative path.
 
+`MCODE_WORKSPACE` overrides the workspace directory that relative paths resolve against.
+
 ## Test
 
 ```bash

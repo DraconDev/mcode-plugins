@@ -49,6 +49,8 @@ servers with the home directory as their working directory and passes no workspa
 environment. An absolute path is unambiguous and preferred; `baseDir` overrides the base directory
 for a relative path.
 
+`MCODE_WORKSPACE` overrides the workspace directory that relative paths resolve against.
+
 ## Test
 
 ```bash
