@@ -104,13 +104,24 @@ export function looksFailed(text) {
   return FAILURE_PATTERNS.some((pattern) => pattern.test(text));
 }
 
+/** Structured failure markers inside a tool result. */
+const STRUCTURED_FAILURE = /"is_?error"\s*:\s*true|"status"\s*:\s*"(?:failed|error|aborted|canceled|cancelled)"/i;
+
+/** A tool result that reports success explicitly. */
+const STRUCTURED_SUCCESS = /"status"\s*:\s*"succeeded"/i;
+
 /**
  * Is this a retryable failure?
  *
  * When the host gives an explicit failure flag, that flag alone decides
  * whether it *is* a failure, and only the transient signature still has to
- * match. When there is no flag, the text has to read like a failure *and*
- * match a transient signature.
+ * match.
+ *
+ * Otherwise the tool result is inspected. MiniMax Code strips the `is_error`
+ * flag from the PostToolUse payload, so the result itself has to carry the
+ * signal. The structured markers the runtime writes — `"status": "failed"`,
+ * `"is_error": true` — are authoritative. Failing that, the text has to read
+ * like an error report *and* match a transient signature.
  *
  * @param {object} options
  * @param {string} options.text - the tool response text
@@ -119,8 +130,13 @@ export function looksFailed(text) {
  */
 export function isRetryableFailure({ text, failed }) {
   if (failed === false) return false;
-  if (failed !== true && !looksFailed(text)) return false;
-  return isTransient(text) || RETRYABLE_STATUS.test(text);
+  if (failed === true) return isTransient(text);
+
+  if (STRUCTURED_FAILURE.test(text)) return isTransient(text);
+  if (STRUCTURED_SUCCESS.test(text)) return false;
+
+  if (!looksFailed(text)) return false;
+  return isTransient(text);
 }
 
 /**
