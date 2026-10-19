@@ -21,6 +21,7 @@ import { join, resolve } from 'node:path';
 import { ChromeBridge } from './bridge.mjs';
 import { createSession } from './session.mjs';
 import { createTools } from './tools.mjs';
+import { resolveWorkspaceDir } from './workspace.mjs';
 
 const SERVER_NAME = 'mcode-chrome';
 const SERVER_VERSION = '1.0.0';
@@ -80,7 +81,7 @@ class McpServer {
     this.bridge = new ChromeBridge();
     this.session = createSession();
     this.extensionPath = resolveExtensionPath();
-    this.workspaceCwd = process.env.MCODE_WORKSPACE ?? process.cwd();
+    this.workspaceCwd = resolveWorkspaceDir();
 
     for (const tool of createTools({
       bridge: this.bridge,

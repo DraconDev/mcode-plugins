@@ -10,8 +10,9 @@ import { createHash } from 'node:crypto';
 
 import { createMcpServer } from './mcp-server.mjs';
 import { createTools } from './tools.mjs';
+import { resolveWorkspaceDir } from './workspace.mjs';
 
-const workspaceCwd = process.env.MCODE_WORKSPACE ?? process.cwd();
+const workspaceCwd = resolveWorkspaceDir();
 const sessionKey = `mcode:${createHash('sha1').update(workspaceCwd).digest('hex').slice(0, 12)}`;
 
 const tools = createTools({ workspaceCwd, sessionKey });

@@ -8,9 +8,10 @@
 
 import { createMcpServer } from './mcp-server.mjs';
 import { createTools } from './tools.mjs';
+import { resolveWorkspaceDir } from './workspace.mjs';
 
 const tools = createTools({
-  workspaceCwd: process.env.MCODE_WORKSPACE ?? process.cwd(),
+  workspaceCwd: resolveWorkspaceDir(),
 });
 
 const server = createMcpServer({
