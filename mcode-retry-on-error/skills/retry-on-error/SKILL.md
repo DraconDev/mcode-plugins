@@ -38,12 +38,17 @@ You do not have to do anything special for this to happen. It is automatic.
 transcript, and the `Stop` hook does not fire for it — the run aborts before a turn completes.
 
 MiniMax Code retries that layer internally, and its budget has been raised on this machine from
-five retries to fifteen by `scripts/apply-mcode-llm-retry-policy.mjs` in the plugin repository
-(sixteen attempts over roughly five and a half minutes, instead of six over twenty seconds). The
-goal runtime adds a second, longer-horizon layer: it parks the session as `Usage limited — Resume
-after provider access recovers` and resumes it when the provider allows.
+five retries to six hours of retrying by `scripts/apply-mcode-llm-retry-policy.mjs` in the plugin
+repository — the first attempts stay close together, then it settles to one every five minutes
+for as long as it takes. The goal runtime adds a second, longer-horizon layer: it parks the
+session as `Usage limited — Resume after provider access recovers` and resumes it when the
+provider allows.
 
-So if you see that error, the recovery is already running. Do not try to work around it by hand
+Note the difference between a throttled provider and an exhausted quota. `Code: 50150` is a
+token-per-minute limit and is retried. A genuinely exhausted quota ends the turn immediately and
+nothing retries it — that is correct, and waiting for the reset is the right answer.
+
+So if you see a rate limit, the recovery is already running. Do not try to work around it by hand
 and do not change your approach. If the turn genuinely ended and the user asks you to continue, say
 what you were doing and pick it up again.
 

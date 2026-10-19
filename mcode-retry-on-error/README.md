@@ -31,9 +31,15 @@ with an unreachable endpoint confirmed it: the run failed and the hook never ran
 MiniMax Code handles that layer itself, by retrying the provider request internally — but with a
 hardcoded budget of five retries, six attempts over about twenty seconds of waiting. That budget
 is not configurable, so `scripts/apply-mcode-llm-retry-policy.mjs` in the parent repository raises
-it to fifteen retries by patching the constant in the bundle. The goal runtime adds a second,
-longer-horizon layer on top: it parks the session as `Usage limited — Resume after provider access
-recovers` and picks it up again when the provider allows.
+it to six hours of retrying by patching the constant in the bundle. The goal runtime adds a
+second, longer-horizon layer on top: it parks the session as `Usage limited — Resume after
+provider access recovers` and picks it up again when the provider allows.
+
+The error that matters here is `Code: 50150`, which is `LLM_TPM_RATE_LIMITED` — a token-per-minute
+limit, which the retry classifier treats as retryable. Two neighbouring codes are terminal and are
+never retried by anything: `42212` (`USAGE_LIMIT_EXCEEDED`) and `50110`
+(`LLM_CREDITS_EXHAUSTED`). Those end the turn and the goal runtime parks the session, which is the
+right behaviour for a quota that is genuinely gone.
 
 So a provider rate limit is retried by mcode with a raised budget, and this plugin covers the
 failures mcode cannot see: tool calls.
