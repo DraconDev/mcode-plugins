@@ -126,8 +126,17 @@ The retry behaviour that does *not* need any hook support is the call-level one 
   (`*.orig.bak`).
 - **Zero runtime dependencies.** Plugins run from a plain `node` executable with no
   `node_modules`, so they can be copied anywhere mcode runs.
-- **Shared code is generated, not hand-copied.** `shared/` holds the single copy of the retry core
-  and the MCP server; `scripts/sync-shared.mjs` copies it into each plugin and `--check` fails if
-  they have drifted. `mcode-chrome/scripts/build-manifest.mjs` does the same for the plugin
-  manifest, deriving `mcp/chrome.mcp.json` from `server/tools.mjs` so the declared tool list can
-  never drift from the running server.
+- **Shared code is generated, not hand-copied.** `shared/` holds the single copy of the retry core,
+  the MCP server and the workspace resolver; `scripts/sync-shared.mjs` copies it into each plugin and
+  `--check` fails if they have drifted.
+- **Manifests are generated, not hand-written.** Each plugin has a `scripts/build-manifest.mjs` that
+  derives `mcp/<server>.mcp.json` from the tool definitions in `server/tools.mjs`, so the declared
+  tool list can never drift from the running server. Run all three after changing a tool:
+  `node mcode-agnes/scripts/build-manifest.mjs && node mcode-codex/scripts/build-manifest.mjs && node mcode-chrome/scripts/build-manifest.mjs`.
+- **Relative paths resolve against the workspace, not the home directory.** MiniMax Code spawns
+  plugin MCP servers with the *home* directory as their working directory and passes no workspace
+  path in the environment, so a relative `savePath` would land in `~/…`. `shared/workspace.mjs`
+  resolves the workspace instead — `MCODE_WORKSPACE` if it is set, otherwise `PWD`, which is the
+  directory mcode was launched from — and every path-taking tool also accepts an explicit
+  `baseDir`. Absolute paths always work and are preferred.
+
