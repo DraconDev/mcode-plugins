@@ -128,7 +128,7 @@ async function httpFailure(response) {
     message: challenged
       ? 'Codex connection was challenged by Cloudflare. This does not establish model or subscription availability.'
       : message,
-    retry: !challenged && [429, 500, 502, 503, 504].includes(response.status),
+    challenged,
   };
 }
 
@@ -243,7 +243,9 @@ export async function requestImage({
     const error = new HttpError(response.status, failure.message, {
       headers: response.headers,
     });
-    error.retry = failure.retry;
+    // Only the Cloudflare challenge is forced to be non-retryable. Every
+    // other status is left to the shared policy, so a 408 is still retried.
+    if (failure.challenged) error.retryable = false;
     throw error;
   }
 

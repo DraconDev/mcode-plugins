@@ -47,23 +47,3 @@ export function resolveApiKey(endpoint, apiKeyEnv) {
   }
   return { key: null, source: null };
 }
-
-/** Resolve an OAuth credential (used by the Codex image API). */
-export function resolveOAuth(provider) {
-  const fromEnv = process.env[`${provider.toUpperCase().replace(/-/g, '_')}_ACCESS_TOKEN`]?.trim();
-  const auth = readPiAuth();
-  const entry = auth[provider];
-  if (entry && typeof entry === 'object' && typeof entry.access === 'string' && entry.access) {
-    return {
-      access: entry.access,
-      refresh: entry.refresh ?? null,
-      expires: typeof entry.expires === 'number' ? entry.expires : null,
-      accountId: entry.accountId ?? null,
-      source: `pi:${provider}`,
-    };
-  }
-  if (fromEnv) {
-    return { access: fromEnv, refresh: null, expires: null, accountId: null, source: 'env' };
-  }
-  return { access: null, refresh: null, expires: null, accountId: null, source: null };
-}

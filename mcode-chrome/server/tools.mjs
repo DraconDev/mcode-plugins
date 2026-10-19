@@ -127,6 +127,19 @@ function withBackground(params) {
 }
 
 /**
+ * Numbered sibling of an image path: "shot.png" + 2 → "shot-2.png".
+ *
+ * A full-page capture comes back as several viewport tiles; they cannot be
+ * stitched into one file without an image encoder, so each tile is written
+ * under its own numbered name.
+ */
+function numberedPath(target, index) {
+  const extension = extname(target);
+  const stem = extension ? target.slice(0, -extension.length) : target;
+  return `${stem}-${index}${extension}`;
+}
+
+/**
  * @typedef {object} ToolContext
  * @property {import('./bridge.mjs').ChromeBridge} bridge
  * @property {{ sessionKey: string, groupTitle: string }} session
@@ -224,7 +237,7 @@ const TOOL_DEFS = [
   {
     name: 'tab',
     description:
-      "List, open, activate, close, or group tabs in the user's real Chrome. Use action=list to see what is open. New tabs join this session's tab group.",
+      "List, open, activate, close, or group tabs in the user's real Chrome. Use action=list to see what is open. New tabs, and tabs you group, join this session's tab group.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -639,32 +652,46 @@ const TOOL_DEFS = [
 
       const blocks = [];
       if (result?.fullPage && Array.isArray(result.tiles) && result.dimensions) {
-        for (const tile of result.tiles) {
-          const base64 = String(tile.dataUrl ?? '').replace(
-            /^data:image\/(?:png|jpeg);base64,/,
-            '',
-          );
-          if (base64) {
-            blocks.push({
-              type: 'image',
-              data: base64,
-              mimeType: args.format === 'jpeg' ? 'image/jpeg' : 'image/png',
-            });
-          }
+        const mimeType = args.format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        // A full-page capture is N separate viewport tiles, not one stitched
+        // image: the extension scrolls, captures, and returns them one by one.
+        const tiles = result.tiles
+          .map((tile) =>
+            String(tile.dataUrl ?? '').replace(/^data:image\/(?:png|jpeg);base64,/, ''),
+          )
+          .filter((base64) => base64.length > 0);
+        if (!tiles.length) return toolError(new Error('Full-page screenshot returned no tiles.'));
+
+        for (const base64 of tiles) {
+          blocks.push({ type: 'image', data: base64, mimeType });
         }
+
+        const written = [];
         if (args.path) {
           const target = resolve(args.baseDir ?? ctx.workspaceCwd, args.path);
           await mkdir(dirname(target), { recursive: true });
-          const first = String(result.tiles[0]?.dataUrl ?? '').replace(
-            /^data:image\/(?:png|jpeg);base64,/,
-            '',
-          );
-          await writeFile(target, Buffer.from(first, 'base64'));
+          // Every tile is written, not just the first one. Stitching them into
+          // a single image needs an image encoder, and the plugin has zero
+          // dependencies, so each tile becomes its own numbered file.
+          for (const [index, base64] of tiles.entries()) {
+            const file = tiles.length === 1 ? target : numberedPath(target, index + 1);
+            await writeFile(file, Buffer.from(base64, 'base64'));
+            written.push(file);
+          }
         }
-        blocks.push({
-          type: 'text',
-          text: `Full-page capture: ${result.dimensions.width}x${result.dimensions.height}px in ${result.tiles.length} tile(s).`,
-        });
+
+        const notes = [
+          `Full-page capture: ${result.dimensions.width}x${result.dimensions.height}px in ${tiles.length} tile(s).`,
+        ];
+        if (written.length > 1) {
+          notes.push(
+            'The page was captured as separate viewport tiles and cannot be stitched without an ' +
+              'image encoder, so every tile was written to its own file:',
+          );
+        }
+        for (const file of written) notes.push(`Saved to ${file}.`);
+
+        blocks.push({ type: 'text', text: notes.join('\n') });
         return { content: blocks };
       }
 
