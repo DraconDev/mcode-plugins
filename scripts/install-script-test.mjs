@@ -137,14 +137,29 @@ try {
     existsSync(join(pluginsDir, 'mcode-retry-on-error', 'hooks', 'hooks.json')),
   );
 
-  // 6. A plugin with an MCP server does get the shared modules.
+  // 6. A plugin with an MCP server does get the shared modules it uses.
   check(
-    'an MCP plugin gets the shared modules',
+    'an MCP plugin gets the shared modules it uses',
     existsSync(join(pluginsDir, 'mcode-agnes', 'server', 'retry.mjs')) &&
       existsSync(join(pluginsDir, 'mcode-agnes', 'server', 'mcp-server.mjs')),
   );
 
-  // 7. The licence travels with the plugin.
+  // 7. A module the plugin does not import must not be installed. The Chrome
+  //    plugin does not use the retry core, so shipping it a copy would be
+  //    dead weight that can still drift from the source.
+  const chrome = install(['mcode-chrome'], dataDir);
+  check('the Chrome plugin installs', chrome.code === 0, `exit=${chrome.code}`);
+  check(
+    'the Chrome plugin gets the modules it uses',
+    existsSync(join(pluginsDir, 'mcode-chrome', 'server', 'mcp-server.mjs')) &&
+      existsSync(join(pluginsDir, 'mcode-chrome', 'server', 'workspace.mjs')),
+  );
+  check(
+    'the Chrome plugin does not get a copy of the retry core it never imports',
+    !existsSync(join(pluginsDir, 'mcode-chrome', 'server', 'retry.mjs')),
+  );
+
+  // 8. The licence travels with the plugin.
   check(
     'the licence is installed with the plugin',
     existsSync(join(pluginsDir, 'mcode-agnes', 'LICENSE')),
