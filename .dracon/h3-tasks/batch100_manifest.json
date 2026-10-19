@@ -355,6 +355,46 @@
     {
       "node_id": "454131646111853",
       "file_name": "100_sea_turtle_reef.png"
+    },
+    {
+      "node_id": "454131646111810",
+      "file_name": "101_mosque_tiled_dome.png"
+    },
+    {
+      "node_id": "454131582800016",
+      "file_name": "102_torii_gate_mist.png"
+    },
+    {
+      "node_id": "454131582800006",
+      "file_name": "103_clownfish_anemone.png"
+    },
+    {
+      "node_id": "454131615977621",
+      "file_name": "104_vintage_motorcycle_barn.jpg"
+    },
+    {
+      "node_id": "454131646111826",
+      "file_name": "105_reading_nook_rain.png"
+    },
+    {
+      "node_id": "454131380625578",
+      "file_name": "106_roman_aqueduct_valley.png"
+    },
+    {
+      "node_id": "454131761717332",
+      "file_name": "107_sunflowers_storm_sky.png"
+    },
+    {
+      "node_id": "454131615977630",
+      "file_name": "108_macaron_tower.png"
+    },
+    {
+      "node_id": "454131646111851",
+      "file_name": "109_cyclist_misty_forest_road.png"
+    },
+    {
+      "node_id": "454131761717352",
+      "file_name": "110_observatory_telescope.png"
     }
   ],
   "failed": [
@@ -364,5 +404,142 @@
       "err_code": 500
     }
   ],
-  "downloaded": []
+  "downloaded": [
+    {
+      "file_name": "31_brutalist_stairway.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1792,
+      "h": 2400,
+      "size": 6696966
+    },
+    {
+      "file_name": "34_old_library_interior.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7918796
+    },
+    {
+      "file_name": "32_tokyo_alley_vending_machines.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1536,
+      "h": 2752,
+      "size": 7188826
+    },
+    {
+      "file_name": "35_modernist_glass_house.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7454769
+    },
+    {
+      "file_name": "36_subway_station_tiled.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 2752,
+      "h": 1536,
+      "size": 3930240
+    },
+    {
+      "file_name": "33_moroccan_riad_courtyard.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2400,
+      "h": 1792,
+      "size": 9114564
+    },
+    {
+      "file_name": "38_rooftop_greenhouse.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 2400,
+      "h": 1792,
+      "size": 4015419
+    },
+    {
+      "file_name": "40_gothic_cathedral_interior.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 1792,
+      "h": 2400,
+      "size": 3550871
+    },
+    {
+      "file_name": "39_industrial_factory_interior.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 2752,
+      "h": 1536,
+      "size": 3913651
+    },
+    {
+      "file_name": "22_dolomite_dramatic_clouds.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 2752,
+      "h": 1536,
+      "size": 3790197
+    },
+    {
+      "file_name": "21_wheat_field_harvester.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7780292
+    },
+    {
+      "file_name": "23_salt_flats_reflection.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 7563770
+    },
+    {
+      "file_name": "26_frozen_lake_cracks.jpg",
+      "ok": true,
+      "format": "JPEG",
+      "w": 2752,
+      "h": 1536,
+      "size": 3849914
+    },
+    {
+      "file_name": "27_coastal_cliffs_green.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1792,
+      "h": 2400,
+      "size": 8405906
+    },
+    {
+      "file_name": "28_hot_spring_terrace.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 8352723
+    },
+    {
+      "file_name": "25_tropical_canyon_waterfall.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 2752,
+      "h": 1536,
+      "size": 8660310
+    },
+    {
+      "file_name": "24_bamboo_grove.png",
+      "ok": true,
+      "format": "PNG",
+      "w": 1536,
+      "h": 2752,
+      "size": 8200927
+    }
+  ]
 }
