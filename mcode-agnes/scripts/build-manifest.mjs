@@ -26,7 +26,10 @@ const manifest = {
       args: ['./server/main.mjs'],
       description:
         'Agnes AI image and video generation, with automatic retry on rate limits and transient failures.',
-      timeout: 900000,
+      // The server polls a video job for up to 30 minutes, and a single poll
+      // can itself retry for up to 15. A client that gave up sooner would
+      // report a timeout for a video that was about to finish.
+      timeout: 3600000,
       tools: TOOL_SCHEMAS,
     },
   },

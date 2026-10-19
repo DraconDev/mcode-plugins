@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/DraconDev/mcode-plugins/schemas/mcp-v1.schema.json",
+  "title": "MiniMax Code MCP server manifest",
+  "description": "The subset of the MCP server manifest format used by the plugins in this repository. Each plugin generates its own manifest from its tool definitions, so the declared tool list can never drift from the running server; this schema exists so editors and contributors can validate a change before installing it.",
+  "type": "object",
+  "required": ["schemaVersion", "mcpServers"],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path to this schema, relative to the manifest."
+    },
+    "schemaVersion": {
+      "const": 1,
+      "description": "The manifest format version. MiniMax Code 0.6.12 and newer read version 1."
+    },
+    "mcpServers": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "The MCP servers this plugin provides, keyed by the name the agent sees.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type", "command"],
+        "additionalProperties": true,
+        "properties": {
+          "type": {
+            "const": "stdio",
+            "description": "Only the stdio transport is used here."
+          },
+          "command": {
+            "type": "string",
+            "description": "The executable. Always node."
+          },
+          "args": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Arguments to the command. The path is relative to the plugin directory, so the plugin stays portable."
+          },
+          "description": {
+            "type": "string",
+            "description": "One sentence, shown in the tool list."
+          },
+          "timeout": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "How long the host waits for a call, in milliseconds. It has to be comfortably above the server's own worst case, or the host reports a timeout for work that was about to finish."
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "description", "inputSchema"],
+              "additionalProperties": true,
+              "properties": {
+                "name": { "type": "string" },
+                "description": { "type": "string" },
+                "inputSchema": {
+                  "type": "object",
+                  "description": "JSON Schema for the tool's arguments."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
