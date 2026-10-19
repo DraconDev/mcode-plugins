@@ -332,15 +332,19 @@ if (isPatched) {
 }
 
 if (guardPatched) {
-  console.log('spent quota and exhausted credits are already retryable');
+  console.log('spent quota, exhausted credits and server errors are already retryable');
 } else {
-  const matches = source.match(QUOTA_GUARD);
-  if (!matches || matches.length !== 1) {
-    console.error('ABORT: could not locate the retryable-error classifier guard.');
+  // `String.match` with a capturing group returns the group as well, so count
+  // the occurrences with a global clone instead.
+  const occurrences = [...source.matchAll(new RegExp(QUOTA_GUARD.source, 'g'))];
+  if (occurrences.length !== 1) {
+    console.error(
+      `ABORT: expected exactly one retryable-error classifier guard, found ${occurrences.length}.`,
+    );
     process.exit(1);
   }
   source = source.replace(QUOTA_GUARD, QUOTA_REPLACEMENT);
-  console.log('patched the classifier: 42212 and 50110 are now retryable');
+  console.log('patched the classifier: 42212, 50110 and 5xx are now retryable');
 }
 
 writeFileSync(found.path, source);
