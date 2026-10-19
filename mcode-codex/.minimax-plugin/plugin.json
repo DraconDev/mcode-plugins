@@ -4,7 +4,7 @@
   "name": "mcode-codex",
   "displayName": "MCode Codex Images",
   "version": "1.0.0",
-  "description": "Generate and edit images with the ChatGPT subscription (Codex) from MiniMax Code, using the credential already stored for pi. Rate limits and transient failures are retried automatically.",
+  "description": "Generate and edit images with the ChatGPT subscription (Codex) from MiniMax Code. Set CODEX_IMAGE_ACCESS_TOKEN and it is ready to go; a credential already stored for pi is picked up automatically if you have one. Rate limits and transient failures are retried.",
   "author": "Dracon",
   "icon": "icon.webp",
   "category": "Productivity",

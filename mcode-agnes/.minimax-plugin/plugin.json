@@ -4,7 +4,7 @@
   "name": "mcode-agnes",
   "displayName": "MCode Agnes",
   "version": "1.0.0",
-  "description": "Generate images and video with Agnes AI from MiniMax Code, using the credential already stored for pi. Rate limits and transient failures are retried automatically.",
+  "description": "Generate images and video with Agnes AI from MiniMax Code. Set AGNES_API_KEY (or AGNES_CN_API_KEY) and it is ready to go; a credential already stored for pi is picked up automatically if you have one. Rate limits and transient failures are retried.",
   "author": "Dracon",
   "icon": "icon.webp",
   "category": "Productivity",
