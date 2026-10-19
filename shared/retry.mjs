@@ -50,11 +50,30 @@ export function isRetryableStatus(status) {
 
 export function isRetryableError(error) {
   if (!error) return false;
-  if (error instanceof HttpError) return isRetryableStatus(error.status);
-  if (typeof error.status === 'number') return isRetryableStatus(error.status);
+  // An explicit flag wins over everything else, including the HTTP status.
+  // This is how a caller says "this particular failure is not worth another
+  // try" — a Cloudflare challenge, say, which arrives with a retryable status
+  // but will never succeed on a retry.
   if (error.retryable === true) return true;
   if (error.retryable === false) return false;
+  if (error instanceof HttpError) return isRetryableStatus(error.status);
+  if (typeof error.status === 'number') return isRetryableStatus(error.status);
   return RETRYABLE_ERROR.test(error.message ?? '');
+}
+
+/**
+ * The `Retry-After` hint on an error, if it carries one.
+ *
+ * `HttpError` is the normal shape, but a caller may throw its own error with
+ * a `status` and a `headers` map. The classifier accepts that shape, so the
+ * delay has to be read from it too — otherwise a server-requested wait is
+ * silently dropped for exactly the errors that are duck-typed.
+ */
+function retryAfterOf(error) {
+  if (!error) return null;
+  if (error instanceof HttpError) return parseRetryAfter(error.headers);
+  if (error.headers) return parseRetryAfter(error.headers);
+  return null;
 }
 
 /** Parse a `Retry-After` header into milliseconds, if it is usable. */
@@ -69,21 +88,42 @@ export function parseRetryAfter(headers, now = Date.now()) {
   return null;
 }
 
-const sleep = (ms, signal) =>
+/**
+ * Wait, unless the signal aborts.
+ *
+ * The abort listener is removed when the wait ends, however it ends. Leaving
+ * it attached would accumulate one dead listener per retry on the caller's
+ * signal, and a signal shared across calls would grow without bound.
+ *
+ * When the wait is aborted, the rejection carries the error that caused the
+ * retry in the first place — a bare "Aborted" would hide the real failure
+ * from the caller and from the logs.
+ */
+const sleep = (ms, signal, cause) =>
   new Promise((resolve, reject) => {
     if (ms <= 0) {
       resolve();
       return;
     }
-    const timer = setTimeout(resolve, ms);
+    let onAbort = null;
+    const detach = () => {
+      if (onAbort && signal) signal.removeEventListener('abort', onAbort);
+      onAbort = null;
+    };
+    const timer = setTimeout(() => {
+      detach();
+      resolve();
+    }, ms);
     if (signal) {
-      const onAbort = () => {
+      onAbort = () => {
         clearTimeout(timer);
-        reject(new Error('Aborted'));
+        detach();
+        const error = new Error('Aborted');
+        if (cause) error.cause = cause;
+        reject(error);
       };
       if (signal.aborted) {
-        clearTimeout(timer);
-        reject(new Error('Aborted'));
+        onAbort();
         return;
       }
       signal.addEventListener('abort', onAbort, { once: true });
