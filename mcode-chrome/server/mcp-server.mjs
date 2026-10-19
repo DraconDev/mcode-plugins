@@ -38,6 +38,16 @@ export function createMcpServer({ name, version, tools, onStart, onStop }) {
     write({ jsonrpc: '2.0', id, error: { code, message } });
 
   async function handle(message) {
+    // A peer that sends valid JSON that is not an object — a bare `null`, a
+    // number, a string — must not take the server down. The destructure below
+    // throws for null, and because `handle` is async that throw becomes a
+    // rejected promise rather than a synchronous error, which the caller's
+    // try/catch cannot see.
+    if (!message || typeof message !== 'object' || Array.isArray(message)) {
+      log('skipping a message that is not an object');
+      return;
+    }
+
     const { id, method, params } = message;
 
     // Notifications carry no id and expect no response.
@@ -110,7 +120,11 @@ export function createMcpServer({ name, version, tools, onStart, onStop }) {
         const trimmed = line.trim();
         if (!trimmed) return;
         try {
-          void handle(JSON.parse(trimmed));
+          // `handle` is async, so a rejection inside it would otherwise be
+          // unhandled and kill the process. Catch it here.
+          void handle(JSON.parse(trimmed)).catch((error) => {
+            log(`error handling a message: ${error?.stack ?? error}`);
+          });
         } catch (error) {
           log(`skipping malformed message: ${error?.message ?? error}`);
         }
