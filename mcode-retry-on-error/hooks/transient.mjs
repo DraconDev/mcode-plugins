@@ -47,7 +47,7 @@ const TERMINAL_FAILURE = [
 /**
  * Words that say a limit is actually in force.
  */
-const LIMIT_CONTEXT = String.raw`\b(?:429|too\s+many\s+requests|exceeded|exhausted|hit|reached|triggered|error|errors|denied|blocked|back\s+off|try\s+again|please\s+retry|retry\s+later|window)\b`;
+const LIMIT_CONTEXT = String.raw`\b(?:429|too\s+many\s+requests|exceeded|exhausted|hit|reached|triggered|denied|blocked|back\s+off|try\s+again|please\s+retry|retry\s+later|window)\b`;
 
 /**
  * Rate limits.
