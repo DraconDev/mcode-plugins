@@ -64,6 +64,23 @@ const TARGET_SCHEMA = {
   additionalProperties: false,
 };
 
+/**
+ * Base directory for relative filesystem paths.
+ *
+ * The plugin server is spawned with the home directory as its working
+ * directory, not the agent's workspace, so a relative path would land in the
+ * wrong place. Callers should pass absolute paths, and `baseDir` is the
+ * escape hatch for the rare case where a relative path is unavoidable.
+ */
+const BASE_DIR_PROP = {
+  baseDir: {
+    type: 'string',
+    description:
+      'Directory relative paths resolve against. Defaults to the server working ' +
+      'directory (the home directory) — prefer absolute paths.',
+  },
+};
+
 function text(value) {
   return { content: [{ type: 'text', text: String(value) }] };
 }
@@ -587,7 +604,13 @@ const TOOL_DEFS = [
     inputSchema: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'Optional path to also write the image to.' },
+        path: {
+          type: 'string',
+          description:
+            'Optional path to also write the image to. Use an ABSOLUTE path: the plugin ' +
+            'server runs with the home directory as its working directory, not your ' +
+            'workspace, so a relative path would land in the wrong place.',
+        },
         format: { type: 'string', enum: ['png', 'jpeg'], description: 'Image format.', default: 'png' },
         quality: { type: 'number', description: 'JPEG quality, 0-100.' },
         fullPage: {
@@ -596,6 +619,7 @@ const TOOL_DEFS = [
         },
         ...TARGET_PROPS,
         ...BACKGROUND_PROP,
+        ...BASE_DIR_PROP,
       },
       additionalProperties: false,
     },
@@ -620,7 +644,7 @@ const TOOL_DEFS = [
           }
         }
         if (args.path) {
-          const target = resolve(ctx.workspaceCwd, args.path);
+          const target = resolve(args.baseDir ?? ctx.workspaceCwd, args.path);
           await mkdir(dirname(target), { recursive: true });
           const first = String(result.tiles[0]?.dataUrl ?? '').replace(
             /^data:image\/(?:png|jpeg);base64,/,
@@ -639,7 +663,7 @@ const TOOL_DEFS = [
       const base64 = dataUrl.replace(/^data:image\/(?:png|jpeg);base64,/, '');
       if (!base64) return toolError(new Error('Screenshot returned no dataUrl.'));
       if (args.path) {
-        const target = resolve(ctx.workspaceCwd, args.path);
+        const target = resolve(args.baseDir ?? ctx.workspaceCwd, args.path);
         await mkdir(dirname(target), { recursive: true });
         await writeFile(target, Buffer.from(base64, 'base64'));
       }
@@ -650,7 +674,9 @@ const TOOL_DEFS = [
       });
       blocks.push({
         type: 'text',
-        text: args.path ? `Saved to ${resolve(ctx.workspaceCwd, args.path)}.` : 'Screenshot captured.',
+        text: args.path
+          ? `Saved to ${resolve(args.baseDir ?? ctx.workspaceCwd, args.path)}.`
+          : 'Screenshot captured.',
       });
       return { content: blocks };
     },
