@@ -93,13 +93,19 @@ const sleep = (ms, signal) =>
 /**
  * Run `fn` with retries.
  *
+ * The default policy is deliberately eager: 15 retries, each a little later
+ * than the last, so a transient rate limit clears on its own instead of the
+ * user having to re-run the prompt. Roughly fifteen attempts spread across
+ * two to three minutes.
+ *
  * @param {(context: { attempt: number, signal?: AbortSignal }) => Promise<any>} fn
  * @param {object} [options]
- * @param {number} [options.maxRetries] - attempts after the first. Default: unlimited.
- * @param {number} [options.maxDurationMs] - total wall-clock budget. Default: 10 minutes.
- * @param {number} [options.baseDelayMs] - first backoff delay. Default: 2000.
- * @param {number} [options.multiplier] - backoff growth. Default: 2.
- * @param {number} [options.maxDelayMs] - cap on one delay. Default: 60000.
+ * @param {number} [options.maxRetries] - attempts after the first. Default: 15.
+ * @param {number} [options.maxDurationMs] - total wall-clock budget. Default: 15 minutes.
+ * @param {number} [options.baseDelayMs] - first backoff delay. Default: 1500.
+ * @param {number} [options.multiplier] - backoff growth. Default: 1.6.
+ * @param {number} [options.maxDelayMs] - cap on one computed delay. Default: 12000.
+ * @param {number} [options.retryAfterMaxMs] - cap on a server-requested delay. Default: 120000.
  * @param {boolean} [options.jitter] - randomise the delay. Default: true.
  * @param {AbortSignal} [options.signal]
  * @param {(info: { attempt: number, delayMs: number, error: Error }) => void} [options.onRetry]
@@ -107,11 +113,12 @@ const sleep = (ms, signal) =>
  */
 export async function withRetry(fn, options = {}) {
   const {
-    maxRetries = Number.POSITIVE_INFINITY,
-    maxDurationMs = 10 * 60_000,
-    baseDelayMs = 2_000,
-    multiplier = 2,
-    maxDelayMs = 60_000,
+    maxRetries = 15,
+    maxDurationMs = 15 * 60_000,
+    baseDelayMs = 1_500,
+    multiplier = 1.6,
+    maxDelayMs = 12_000,
+    retryAfterMaxMs = 120_000,
     jitter = true,
     signal,
     onRetry,
@@ -131,14 +138,17 @@ export async function withRetry(fn, options = {}) {
       if (Date.now() - startedAt > maxDurationMs) throw error;
 
       const retryAfter = error instanceof HttpError ? parseRetryAfter(error.headers) : null;
-      let delay = retryAfter ?? Math.min(maxDelayMs, baseDelayMs * multiplier ** (attempt - 1));
-      delay = Math.min(delay, maxDelayMs);
-      if (jitter && retryAfter === null) {
-        delay = Math.round(delay * (0.8 + Math.random() * 0.4));
-      }
+      // A server that names a delay gets it honoured — but not beyond the
+      // explicit ceiling, so a broken `Retry-After: 86400` cannot wedge a call.
+      const delay = retryAfter !== null
+        ? Math.min(retryAfter, retryAfterMaxMs)
+        : Math.min(maxDelayMs, baseDelayMs * multiplier ** (attempt - 1));
+      const jittered = jitter && retryAfter === null
+        ? Math.round(delay * (0.85 + Math.random() * 0.3))
+        : delay;
 
-      onRetry?.({ attempt, delayMs: delay, error });
-      await sleep(delay, signal);
+      onRetry?.({ attempt, delayMs: jittered, error });
+      await sleep(jittered, signal);
     }
   }
 }
