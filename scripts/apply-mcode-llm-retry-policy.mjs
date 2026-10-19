@@ -441,8 +441,18 @@ if (guardPatched) {
   console.log('patched the classifier: 42212, 50110 and 5xx are now retryable');
 }
 
-writeFileSync(found.path, source);
-console.log(`  ${found.path}`);
+// Only write when something actually changed. Rewriting an unchanged file
+// would bump its mtime, and the mtime is what tells us which mcode processes
+// are still running pre-patch code.
+if (source !== found.source) {
+  writeFileSync(found.path, source);
+  console.log(`  ${found.path}`);
+} else {
+  console.log(`  ${found.path} (already up to date, not rewritten)`);
+}
+
+warnAboutStaleMcode(found.path);
+
 console.log('');
 console.log('Six hours of retries — about a hundred attempts, settling to one every five minutes.');
 console.log('Re-run this script after `mcode update` — the bundle is replaced wholesale there.');
