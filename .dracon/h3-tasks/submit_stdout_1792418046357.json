@@ -1,1 +1,0 @@
-{"code":0,"message":"video task submitted; call the query tool with this task_id and model","task_id":"454102063903101","status":"submitted","model":"MiniMax-Hailuo-2.3","duration":10,"resolution":"768P","next_step":"Call matrix_query_video_generation with this task_id and the same model."}

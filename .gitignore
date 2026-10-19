@@ -130,3 +130,11 @@ web/games/wip/football-forever/docs/audit/
 
 # Local runtime state
 node_modules/
+
+# Generated media from ad-hoc generation tasks. Not plugin content.
+videos/
+deliverables/
+
+# The plugin manifests are generated from the tool definitions; the generator
+# is the source of truth, so a stale copy in the tree is noise.
+*.mcp.json.tmp
