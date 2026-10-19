@@ -10,10 +10,13 @@ the backstop.
 | Situation | Which hook | Action |
 | --- | --- | --- |
 | A tool call failed with a rate limit, quota, timeout, 5xx or network error | `PostToolUse` | Inject a retry instruction into the tool result, while the model is still working. |
-| The turn ended with `stopReason: "error"` | `Stop` | Block the turn, feed a retry instruction back to the model. |
+| The turn ended with `stopReason: "error"` and the error looks transient | `Stop` | Block the turn, feed a retry instruction back to the model. |
 | The last tool call failed transiently and the model still gave up | `Stop` | Same. |
 | The turn was aborted | `Stop` | Never retry — the user cancelled. |
 | The last tool call failed fatally (`ENOENT`, bad argument) | neither | Never retry — it would fail the same way. |
+| The host rejected the call (a validation error, a permission error) | neither | Never retry — the same call is rejected the same way. |
+| The turn ended in a permanent error (`401 Unauthorized`, a content-filter refusal) | `Stop` | Never retry — a rejected credential does not fix itself. |
+| The model already recovered in this turn and produced a final answer | `Stop` | Never retry — the operation already succeeded. |
 | The user sent a new message | `Stop` | Stop; the user has taken over. |
 | The turn completed cleanly | `Stop` | Reset the counters so the next failure starts from attempt one. |
 
@@ -76,6 +79,20 @@ to carry the signal:
 - A structured result with no status marker is not retried. The runtime always writes one, and
   guessing from text that merely happens to be quoted inside a payload produces false positives —
   reading a file that mentions a 429 is not a rate limit.
+
+Three things the hook is careful about:
+
+- **The delay is clamped.** The runtime kills the hook at its 10s timeout, so a delay that runs
+  past the budget would be killed before the first byte of output and the failure would be lost
+  silently. The delay is clamped to 7.5s — the same budget the `Stop` hook uses — and the clamped
+  value is the one that is actually slept.
+- **The attempt counter is reset by a successful call.** The counter is the attempt number of the
+  failure the model is working on. A counter that only ever grows announces "attempt 10" for an
+  operation the model has never tried, and pushes the model towards giving up. The counter file is
+  written to a temporary file and renamed into place, so two tool calls that finish at the same
+  moment cannot lose each other's update.
+- **The injected detail is the head of the response.** The cause of a failure is at the start —
+  the status line, the error message — and the tail is usually the command's own output.
 
 ### `Stop` — `hooks/stop-retry.mjs`
 
