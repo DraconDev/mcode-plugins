@@ -28,6 +28,12 @@ Each session also gets its own **automation tab**, grouped as `MCode Session: <i
 explicit target act on that tab, so the user's currently active tab is never navigated, overwritten,
 or closed by accident.
 
+One caveat about tab groups: the companion extension's `groupTab` *renames* the group a tab is
+already in, rather than adding the tab to a second one. So `tab {action: "group"}` on a tab the
+user grouped themselves renames the user's group to the session title. The plugin sends the real
+session title — the extension's own `"Pi"` fallback is never used — but the rename itself is
+extension behaviour, and it is worth knowing before pointing `tab group` at a user's tab.
+
 ## Install
 
 ```bash
