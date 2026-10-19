@@ -110,6 +110,12 @@ const assistantAborted = {
   stopReason: 'aborted',
   timestamp: Date.now(),
 };
+const assistantToolUse = {
+  role: 'assistant',
+  content: [{ type: 'toolUse', name: 'bash', input: { command: 'curl https://example.com' } }],
+  stopReason: 'toolUse',
+  timestamp: Date.now(),
+};
 const toolRateLimited = {
   role: 'toolResult',
   toolName: 'generate_image',
