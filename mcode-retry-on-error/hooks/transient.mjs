@@ -119,22 +119,32 @@ const STRUCTURED_SUCCESS = /"status"\s*:\s*"succeeded"/i;
  *
  * Otherwise the tool result is inspected. MiniMax Code strips the `is_error`
  * flag from the PostToolUse payload, so the result itself has to carry the
- * signal. The structured markers the runtime writes — `"status": "failed"`,
- * `"is_error": true` — are authoritative. Failing that, the text has to read
- * like an error report *and* match a transient signature.
+ * signal:
+ *
+ *   - A structured result is judged by the markers the runtime writes into it
+ *     — `"status": "failed"`, `"isError": true`. Those are authoritative.
+ *   - A plain-text result is judged by its own words, so it has to read like
+ *     an error report *and* match a transient signature.
+ *
+ * A structured result with no status marker is not retried. The runtime
+ * always writes one, and guessing from text that merely happens to be quoted
+ * inside a payload produces false positives — reading a file that mentions a
+ * 429 is not a rate limit.
  *
  * @param {object} options
  * @param {string} options.text - the tool response text
  * @param {boolean} [options.failed] - an explicit failure flag, when the host provides one
+ * @param {boolean} [options.isPlainText] - the response was a plain string, not a structured object
  * @returns {boolean}
  */
-export function isRetryableFailure({ text, failed }) {
+export function isRetryableFailure({ text, failed, isPlainText = false }) {
   if (failed === false) return false;
   if (failed === true) return isTransient(text);
 
   if (STRUCTURED_FAILURE.test(text)) return isTransient(text);
   if (STRUCTURED_SUCCESS.test(text)) return false;
 
+  if (!isPlainText) return false;
   if (!looksFailed(text)) return false;
   return isTransient(text);
 }

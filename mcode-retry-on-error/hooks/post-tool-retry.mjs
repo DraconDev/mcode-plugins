@@ -100,12 +100,14 @@ async function main() {
   }
 
   const toolName = payload.tool_name ?? 'tool';
-  const text = textOf(payload.tool_response);
-  // The host does not always pass an explicit error flag, so the text has to
-  // carry the signal. `is_error === false` is authoritative when present.
+  const response = payload.tool_response;
+  const text = textOf(response);
+  // The host does not always pass an explicit error flag, so the result has
+  // to carry the signal. `is_error === false` is authoritative when present.
   const failed = payload.is_error === undefined ? undefined : payload.is_error === true;
+  const isPlainText = typeof response === 'string';
 
-  if (!isRetryableFailure({ text, failed })) return;
+  if (!isRetryableFailure({ text, failed, isPlainText })) return;
 
   const file = stateFile(payload.session_id);
   const attempts = loadAttempts(file) + 1;
