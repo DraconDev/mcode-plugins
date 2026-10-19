@@ -147,15 +147,17 @@ no way to configure it: the policy is merged in by `Gpn(t.policy)`, but `t.polic
 the only caller that supplies `resolveLlmRetry` hands back an observer and nothing else, and there
 is no config key or environment variable for it anywhere in the bundle.
 
-`scripts/apply-mcode-llm-retry-policy.mjs` patches the constant to the same policy the image
-plugins use:
+`scripts/apply-mcode-llm-retry-policy.mjs` patches the constant so the retry survives a quota
+window rather than a momentary burst:
 
 ```js
-{maxRetries: 15, baseDelayMs: 1500, maxDelayMs: 30000, maxRetryElapsedMs: 900000}
+{maxRetries: 200, baseDelayMs: 1500, maxDelayMs: 300000, maxRetryElapsedMs: 21600000}
 ```
 
-Sixteen attempts over roughly five and a half minutes, each a little later than the last, with a
-fifteen minute ceiling in case a server asks for a long `Retry-After`.
+The first few attempts stay close together, so a rate limit that clears in seconds is caught
+almost immediately. The delay then doubles up to a five-minute cap, and the loop keeps going for
+**six hours** — long enough to outlast a quota that takes hours to reset. The attempt count is a
+backstop; the wall clock is what actually binds.
 
 ```bash
 node scripts/apply-mcode-llm-retry-policy.mjs           # patch it
@@ -168,7 +170,7 @@ Measured against a local endpoint that always answers 429:
 | Policy | Attempts | Gaps between attempts | Wall clock |
 | --- | --- | --- | --- |
 | Stock | 6 | 1s, 2s, 4s, 8s, 16s | ~20s |
-| Patched | 16 | 1.5s, 3s, 6s, 12s, 24s, 30s (capped) | ~5.5min |
+| Patched | ~100 | 1.5s, 3s, 6s, 12s, 24s, 48s, 96s, 192s, then 5min | 6h |
 
 The original chunk is kept as `<chunk>.orig.bak` beside it, and the script refuses to overwrite a
 policy it does not recognise. `mcode update` replaces the bundle wholesale, so re-run the script
@@ -176,6 +178,26 @@ afterwards — the same caveat as the shim fix.
 
 This is a policy change to a third-party install, not a bug fix. It is the only lever that exists:
 the provider error never reaches a plugin hook, so no plugin can add retries at that layer.
+
+### Which provider errors this covers
+
+The error in the screenshots is `Code: 50150`, which is `LLM_TPM_RATE_LIMITED` — a token-per-minute
+limit. The retry classifier treats it as **retryable**, so the budget above governs it.
+
+Two neighbouring codes are **not** retryable by anything, and no budget change affects them:
+
+| Code | Meaning | Retryable |
+| --- | --- | --- |
+| 50150 | `LLM_TPM_RATE_LIMITED` | yes |
+| 50111 | `LLM_RATE_LIMITED` | yes |
+| 50151 | `LLM_CLUSTER_OVERLOADED` | yes |
+| 42212 | `USAGE_LIMIT_EXCEEDED` | no — terminal |
+| 50110 | `LLM_CREDITS_EXHAUSTED` | no — terminal |
+
+A terminal `usage_limit` or `credits_exhausted` ends the turn immediately; the goal runtime then
+parks the session as `Usage limited — Resume after provider access recovers` and resumes it when
+the provider allows. That is the right behaviour for a quota that is genuinely gone, so it is left
+alone.
 
 ## Known gap: none outstanding
 
