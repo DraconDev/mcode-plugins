@@ -292,6 +292,18 @@ async function main() {
   for await (const chunk of process.stdin) chunks.push(chunk);
   const payload = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
 
+  // Heartbeat: proves the hook process ran, whatever the decision is.
+  try {
+    mkdirSync(DATA_DIR, { recursive: true });
+    writeFileSync(
+      join(DATA_DIR, 'heartbeat.log'),
+      `${new Date().toISOString()} ${JSON.stringify(Object.keys(payload))}\n`,
+      'utf8',
+    );
+  } catch {
+    // Never let diagnostics break the hook.
+  }
+
   // Diagnostic escape hatch: force a block on every Stop, to verify that the
   // hook is wired up end to end. Checked before anything else so it cannot be
   // short-circuited by an unexpected transcript shape.
