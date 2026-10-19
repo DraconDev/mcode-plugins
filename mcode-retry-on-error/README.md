@@ -46,6 +46,12 @@ failure stays terminal — a bad credential will not fix itself.
 So a provider rate limit is retried by mcode with a raised budget, and this plugin covers the
 failures mcode cannot see: tool calls.
 
+One caveat: Node loads the mcode bundle into memory when a process starts, so the raised budget only
+reaches sessions started *after* the patch. A session that was already open keeps the old five-retry
+budget until it is restarted, which looks exactly like the patch not having worked. The patch script
+lists those processes for you — `node scripts/apply-mcode-llm-retry-policy.mjs --check` prints any
+that are still running the old code.
+
 ## The hooks
 
 ### `PostToolUse` — `hooks/post-tool-retry.mjs`
