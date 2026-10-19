@@ -295,13 +295,13 @@ async function main() {
   // Diagnostic escape hatch: force a block on every Stop, to verify that the
   // hook is wired up end to end. Checked before anything else so it cannot be
   // short-circuited by an unexpected transcript shape.
-  if (process.env.MCODE_RETRY_FORCE_BLOCK === '1') {
+  if (FORCE_BLOCK) {
     process.stdout.write(
       `${JSON.stringify({
         decision: 'block',
         reason:
-          'MCODE_RETRY_FORCE_BLOCK is set. The retry hook fired successfully. ' +
-          'Unset the variable to disable this diagnostic.',
+          'The retry hook fired successfully (forceBlock diagnostic is on). ' +
+          'Turn it off by setting "forceBlock": false in the plugin config.',
       })}\n`,
     );
     return;
