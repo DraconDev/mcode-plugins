@@ -4,3 +4,10 @@
 # Local runtime state
 node_modules/
 *.log
+
+# mcode-chrome: stale vendor bundle backups (see scripts/apply-mcode-rm-shim-fix.mjs)
+*.orig.bak
+
+# Local runtime state
+node_modules/
+*.log
