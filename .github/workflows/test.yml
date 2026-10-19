@@ -1,0 +1,83 @@
+name: test
+
+# The plugins have no runtime dependencies and no build step, so the whole
+# check suite is "node <script>". Everything here runs on a bare Node install.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check the syntax of every module
+        run: |
+          find . -name '*.mjs' -not -path './node_modules/*' -print0 \
+            | xargs -0 -n1 node --check
+
+      - name: Test the shared retry policy
+        run: node scripts/retry-test.mjs
+
+      - name: Test the workspace resolver
+        run: node scripts/workspace-test.mjs
+
+      - name: Check the shared modules are in sync
+        run: node scripts/sync-shared.mjs --check
+
+      - name: Test the Chrome bridge protocol
+        run: node mcode-chrome/scripts/server-mode-test.mjs
+
+      - name: Test the Stop hook
+        run: node mcode-retry-on-error/scripts/hook-test.mjs
+
+      - name: Test the PostToolUse hook
+        run: node mcode-retry-on-error/scripts/post-tool-hook-test.mjs
+
+      - name: Check the generated manifests are up to date
+        run: |
+          node mcode-agnes/scripts/build-manifest.mjs
+          node mcode-codex/scripts/build-manifest.mjs
+          node mcode-chrome/scripts/build-manifest.mjs
+          git diff --exit-code -- '*/mcp/*.mcp.json'
+
+  package:
+    # Each plugin becomes a downloadable tarball, so someone can install one
+    # without cloning the whole repository.
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Package each plugin
+        run: |
+          mkdir -p dist
+          for plugin in mcode-chrome mcode-agnes mcode-codex mcode-retry-on-error; do
+            # The same file set the installer copies, so the archive is
+            # installable on its own.
+            tar -czf "dist/${plugin}.tar.gz" \
+              --exclude='scripts' \
+              -C "$plugin" \
+              .minimax-plugin mcp server skills hooks icon.webp README.md 2>/dev/null \
+              || tar -czf "dist/${plugin}.tar.gz" -C "$plugin" \
+                   .minimax-plugin mcp server skills icon.webp README.md 2>/dev/null \
+              || tar -czf "dist/${plugin}.tar.gz" -C "$plugin" \
+                   .minimax-plugin mcp skills icon.webp README.md
+            echo "packed ${plugin}"
+          done
+          ls -la dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mcode-plugins
+          path: dist/*.tar.gz
