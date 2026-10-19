@@ -704,7 +704,7 @@
               },
               "fullPage": {
                 "type": "boolean",
-                "description": "Capture the full scrollable page as stitched tiles."
+                "description": "Capture the full scrollable page as separate viewport tiles."
               },
               "targetId": {
                 "type": "string",
