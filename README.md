@@ -213,6 +213,26 @@ pulls the function out of the live bundle and runs it against realistic error fa
 only way to cover the managed provider path — MiniMax Code marks BYOK providers as "retry every
 error", so a custom provider never reaches the classifier at all.
 
+### Restarting after the patch
+
+Node reads the bundle into memory when a process starts, so a patch on disk only reaches processes
+started afterwards. A session that was already open when the patch landed keeps the old budget —
+five retries, about half a minute — until it is restarted, and the symptom is confusing: the code
+on disk promises six hours of retries while the session in front of you still gives up immediately.
+
+`scripts/apply-mcode-llm-retry-policy.mjs` therefore checks for mcode processes that started before
+the chunk was written and prints them with their start times:
+
+```
+WARNING: 19 mcode processes are still running the old code.
+  PID 3804772  started 2026-10-19 12:54:09
+  The oldest has been up for 5h 26m.
+  They keep the old budget — 5 retries, about half a minute — until restarted.
+  Quit those sessions and start mcode again to pick up the new policy.
+```
+
+The same warning appears in `--check` mode, so a scheduled check is enough to spot it.
+
 ## Known gap: none outstanding
 
 The `mcode-retry-on-error` plugin installs a `Stop` hook that blocks a failed turn and feeds a
