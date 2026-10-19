@@ -105,9 +105,46 @@ it continues it. The reason arrives at the model wrapped in `<plugin-hook-contex
 continuation rather than a replay of the user's prompt, so side effects from earlier tool calls
 are not repeated blindly.
 
+Only the *current* turn counts. A tool result that comes before the last assistant message belongs
+to a step the model has already recovered from — it produced its final answer after that failure —
+so the hook does not retry it. Retrying it would repeat an operation that already succeeded, and
+the turn could never end.
+
+A turn error goes through the same classifier as a tool failure, so a permanent cause — a rejected
+credential, a content-filter refusal — is not retried and the reason never claims a transient
+failure that was not found.
+
+The retry budget is finite, so a permanent failure cannot cost the runtime's full allowance of
+eight `Stop` continuations per turn. `stop_hook_active` is honoured: the continuations granted
+inside one turn are counted apart from the retry episode, so a turn that recovers and then fails
+again still ends.
+
 Both hooks share `hooks/transient.mjs`, which holds the failure signatures. A failure is only
 retried when it both reads like a failure and matches a transient signature — a bad request will
 not fix itself, so 4xx responses and fatal errors are left alone.
+
+The signatures are tiered:
+
+- **Terminal** — the host refused the call itself: a validation error (`Validation failed for
+  tool …`) or a permission error (`Permission denied for …`). These win over everything else,
+  because the payload they carry can contain any text at all — a user's own summary, a quota
+  policy, a timeout field name — and an identical retry is rejected the same way.
+- **Strong** — a phrase that only shows up when something is reported as throttled, overloaded or
+  unreachable. The ambiguous words need a context: the bare word `timeout` is a field name in
+  half the validation errors mcode produces (`- timeout: must be <= 2147483`) and a constant name
+  in half the source files a model reads, so it only counts next to a request, a socket or a
+  deadline. `quota` is the word a host policy uses (`command exceeded quota policy`), so it only
+  counts when the text says the allowance ran out.
+- **Weak** — a bare status number. It only counts in a status position — next to `HTTP`,
+  `status code`, `responded` — and next to a failure word. A changelog that lists issue #429, a
+  test summary with "515 passed" and a config file with "timeout: 30000" are all numbers that a
+  retry cannot fix.
+
+Measured against the real transcripts on this machine (886 failed tool results across 300
+sessions), the old signatures called 115 of them transient; 69 were validation errors whose
+payload merely mentioned a status code, and every remaining hit was a file that happened to
+contain a timeout constant. The tightened signatures call 11, and all 11 are real timeouts and
+rate limits.
 
 ## Configuration
 
@@ -124,18 +161,22 @@ scripts. Configuration lives in a file, in the plugin's data directory:
   "delayMs": 5000,
   "backoffMultiplier": 2,
   "maxDelayMs": 60000,
-  "maxRetries": null,
-  "maxDurationMs": null,
+  "maxRetries": 3,
+  "maxDurationMs": 120000,
   "debug": false,
   "forceBlock": false
 }
 ```
 
-`maxRetries` and `maxDurationMs` are `null` by default, meaning unlimited. `debug: true` appends
-a heartbeat line to `heartbeat.log` on every turn end, and to `post-tool-heartbeat.log` on every
-tool call, which is how you confirm the hooks are running and what they can actually see.
-`forceBlock: true` blocks every turn end (three times, then stops) — a diagnostic to check the
-block reaches the model.
+`maxRetries` is how many continuations one failure episode gets, and `maxDurationMs` how long that
+episode may last. The defaults are finite on purpose: the runtime allows eight `Stop`
+continuations per turn, so an unbounded plugin turns one permanent failure into eight extra model
+round-trips. Three continuations is enough for a rate limit that resets in a minute, and short
+enough that a failure that will never work does not eat the session. `null` is the explicit
+opt-out and means "no limit". `debug: true` appends a heartbeat line to `heartbeat.log` on every
+turn end, and to `post-tool-heartbeat.log` on every tool call, which is how you confirm the hooks
+are running and what they can actually see. `forceBlock: true` blocks every turn end (three times,
+then stops) — a diagnostic to check the block reaches the model.
 
 The environment variables `MCODE_RETRY_DELAY_MS`, `MCODE_RETRY_MAX_RETRIES`,
 `MCODE_RETRY_MAX_DURATION_MS`, `MCODE_RETRY_DISABLED` and `MCODE_RETRY_DEBUG` are also honoured,
@@ -150,7 +191,10 @@ node scripts/post-tool-hook-test.mjs # the PostToolUse decisions
 
 Both tests feed the hooks the same payload shapes mcode sends. The `Stop` test builds a
 throwaway session transcript; the `PostToolUse` test covers each failure signature, each
-non-failure lookalike, and the disabled path.
+non-failure lookalike, and the disabled path. Between them they also cover the regressions that
+motivated the current signatures: a turn the model already recovered from, a deterministic
+failure that used to look transient, the delay clamp, the counter reset, and the finite retry
+budget.
 
 ## Licence
 
