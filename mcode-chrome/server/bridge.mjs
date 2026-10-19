@@ -23,7 +23,9 @@
  * Security posture is copied from pi-chrome on purpose:
  *   - the listener binds to 127.0.0.1 only; there is no network exposure.
  *   - /command is accepted only from a local process (no Origin, no sec-fetch-site).
- *   - /next and /result are accepted only from a chrome-extension:// origin.
+ *   - /next and /result reject any request that carries a browser Origin or a
+ *     cross-site sec-fetch-site, so a web page cannot drive the bridge; a local
+ *     process (which sends neither) is trusted here too, exactly like /command.
  */
 
 import { createServer } from 'node:http';
@@ -147,7 +149,12 @@ export class ChromeBridge {
   async probeStatus() {
     if (this.#mode !== 'client') return this.status();
     try {
-      const response = await fetch(`${this.url}/status`);
+      // A short budget: the owner can be alive but unresponsive, and undici's
+      // default header timeout is 300s — far longer than this plugin's own
+      // 180s MCP timeout, so a hung owner would stall the status tool.
+      const response = await fetch(`${this.url}/status`, {
+        signal: AbortSignal.timeout(2_000),
+      });
       if (!response.ok) return this.status();
       const remote = await response.json();
       return {

@@ -623,7 +623,7 @@ const TOOL_DEFS = [
   {
     name: 'screenshot',
     description:
-      "Capture a screenshot of the page in the user's real Chrome. The image is returned inline; pass path to also save it to disk.",
+      "Capture a screenshot of the page in the user's real Chrome. The image is returned inline; pass path to also save it to disk. A full-page capture is returned as separate viewport tiles, which are saved as numbered files (shot-1.png, shot-2.png, …).",
     inputSchema: {
       type: 'object',
       properties: {

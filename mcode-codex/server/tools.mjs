@@ -9,11 +9,12 @@
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, extname, resolve } from 'node:path';
+import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 import {
   DEFAULT_MODEL,
   MAX_EDIT_IMAGES,
+  MAX_INPUT_IMAGE_BYTES,
   OUTPUT_FORMATS,
   requestImage,
 } from './codex.mjs';
