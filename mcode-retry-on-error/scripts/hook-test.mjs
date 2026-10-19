@@ -29,10 +29,10 @@ const check = (label, ok, detail = '') => {
 };
 
 /** Build a fake session with the given message list and run the hook. */
-async function runHook(messages, { payload = {}, env = {} } = {}) {
-  const home = mkdtempSync(join(tmpdir(), 'retry-hook-test-'));
+async function runHook(messages, { payload = {}, env = {}, home = null } = {}) {
+  const sessionHome = home ?? mkdtempSync(join(tmpdir(), 'retry-hook-test-'));
   const sessionDir = join(
-    home,
+    sessionHome,
     '.minimax',
     'v2',
     'sessions',
@@ -52,7 +52,7 @@ async function runHook(messages, { payload = {}, env = {} } = {}) {
     session_id: SESSION_ID,
     turn_id: 'turn_1',
     transcript_path: null,
-    cwd: home,
+    cwd: sessionHome,
     stop_hook_active: false,
     last_assistant_message: 'done',
     ...payload,
@@ -61,9 +61,9 @@ async function runHook(messages, { payload = {}, env = {} } = {}) {
   const child = spawn(process.execPath, [HOOK], {
     env: {
       ...process.env,
-      HOME: home,
+      HOME: sessionHome,
       PLUGIN_ROOT,
-      PLUGIN_DATA: join(home, 'plugin-data'),
+      PLUGIN_DATA: join(sessionHome, 'plugin-data'),
       MCODE_RETRY_DELAY_MS: '0',
       ...env,
     },
@@ -87,7 +87,7 @@ async function runHook(messages, { payload = {}, env = {} } = {}) {
   } catch {
     // leave null
   }
-  return { parsed, out, err, code };
+  return { parsed, out, err, code, home: sessionHome };
 }
 
 const user = { role: 'user', content: [{ type: 'text', text: 'go' }], timestamp: Date.now() };
@@ -187,6 +187,108 @@ const toolFatal = {
     env: { MCODE_RETRY_DISABLED: '1' },
   });
   check('MCODE_RETRY_DISABLED turns the hook off', parsed === null, parsed ? 'blocked (wrong)' : 'no output');
+}
+
+// 9. A turn the model recovered from is not retried. The failed tool result
+//     belongs to an earlier step of the same turn: the model produced its
+//     final answer after it, so the operation already succeeded and a retry
+//     would repeat its side effects.
+{
+  const { parsed } = await runHook([user, toolRateLimited, assistantOk]);
+  check(
+    'a recovered turn is not retried',
+    parsed === null,
+    parsed ? JSON.stringify(parsed).slice(0, 80) : 'no output',
+  );
+}
+
+// 10. A tool call that failed and was the last thing the turn did is still
+//     retried — that is the case the hook exists for.
+{
+  const { parsed } = await runHook([user, assistantToolUse, toolRateLimited]);
+  check(
+    'a failure at the end of the turn is retried',
+    parsed?.decision === 'block' && /rate limit/i.test(parsed?.reason ?? ''),
+    parsed ? 'blocked' : 'no output',
+  );
+}
+
+// 11. A permanent turn error is not retried. The turn error goes through the
+//     same classifier as a tool failure, so a rejected credential is left
+//     alone instead of being retried eight times.
+{
+  const { parsed } = await runHook([
+    user,
+    {
+      role: 'assistant',
+      content: [],
+      stopReason: 'error',
+      errorMessage: '401 Unauthorized: the credential was rejected',
+      timestamp: Date.now(),
+    },
+  ]);
+  check(
+    'a permanent turn error is not retried',
+    parsed === null,
+    parsed ? JSON.stringify(parsed).slice(0, 80) : 'no output',
+  );
+}
+
+// 12. The retry budget is finite: the hook grants the configured number of
+//     retries and then ends the turn.
+{
+  const home = mkdtempSync(join(tmpdir(), 'retry-hook-test-'));
+  const env = { MCODE_RETRY_MAX_RETRIES: '2' };
+  const first = await runHook([user, assistantError], { home, env });
+  const second = await runHook([user, assistantError], { home, env });
+  const third = await runHook([user, assistantError], { home, env });
+  check(
+    'the first retry is granted',
+    first.parsed?.decision === 'block',
+    first.parsed ? 'blocked' : 'no output',
+  );
+  check(
+    'the second retry is granted',
+    second.parsed?.decision === 'block',
+    second.parsed ? 'blocked' : 'no output',
+  );
+  check(
+    'the budget ends the loop',
+    third.parsed === null,
+    third.parsed ? JSON.stringify(third.parsed).slice(0, 80) : 'no output',
+  );
+}
+
+// 13. `stop_hook_active` is honoured. The runtime re-enters the hook with
+//     the flag set when a Stop block already continued the turn, and the
+//     continuations granted inside one turn are counted apart from the
+//     retry episode: a turn that recovers and then fails again still ends.
+{
+  const home = mkdtempSync(join(tmpdir(), 'retry-hook-test-'));
+  const env = { MCODE_RETRY_MAX_RETRIES: '3' };
+  const reEntry = { stop_hook_active: true };
+  const run = (messages) => runHook(messages, { home, env, payload: reEntry });
+
+  const first = await run([user, assistantError]);
+  await run([user, assistantOk]);
+  const second = await run([user, assistantError]);
+  await run([user, assistantOk]);
+  const third = await run([user, assistantError]);
+  await run([user, assistantOk]);
+  const fourth = await run([user, assistantError]);
+
+  check(
+    'the first three continuations of a turn are granted',
+    first.parsed?.decision === 'block' &&
+      second.parsed?.decision === 'block' &&
+      third.parsed?.decision === 'block',
+    `first=${first.parsed?.decision} second=${second.parsed?.decision} third=${third.parsed?.decision}`,
+  );
+  check(
+    'a re-entry past the per-turn budget does not block',
+    fourth.parsed === null,
+    fourth.parsed ? JSON.stringify(fourth.parsed).slice(0, 80) : 'no output',
+  );
 }
 
 const failed = results.filter((r) => !r.ok);
