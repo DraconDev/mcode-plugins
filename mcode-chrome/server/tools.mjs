@@ -784,16 +784,21 @@ const TOOL_DEFS = [
         paths: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Local file paths to upload.',
+          description:
+            'Local file paths to upload. Use ABSOLUTE paths: the plugin server runs with ' +
+            'the home directory as its working directory, not your workspace, so a ' +
+            'relative path would resolve against the wrong place.',
         },
         ...TARGET_PROPS,
         ...BACKGROUND_PROP,
+        ...BASE_DIR_PROP,
       },
       required: ['paths'],
       additionalProperties: false,
     },
     run: async (args, ctx) => {
-      const paths = (args.paths ?? []).map((p) => resolve(ctx.workspaceCwd, p));
+      const base = args.baseDir ?? ctx.workspaceCwd;
+      const paths = (args.paths ?? []).map((p) => resolve(base, p));
       await ctx.pageSend('page.upload', { ...args, paths });
       return text(`Uploaded ${paths.length} file(s) to ${args.uid ?? args.selector}`);
     },

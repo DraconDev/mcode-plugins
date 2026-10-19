@@ -687,7 +687,7 @@
             "properties": {
               "path": {
                 "type": "string",
-                "description": "Optional path to also write the image to."
+                "description": "Optional path to also write the image to. Use an ABSOLUTE path: the plugin server runs with the home directory as its working directory, not your workspace, so a relative path would land in the wrong place."
               },
               "format": {
                 "type": "string",
@@ -722,6 +722,10 @@
                 "type": "boolean",
                 "description": "If true (the default) run silently without focusing Chrome. Pass false to focus Chrome and activate the tab so the user can watch.",
                 "default": true
+              },
+              "baseDir": {
+                "type": "string",
+                "description": "Directory relative paths resolve against. Defaults to the server working directory (the home directory) — prefer absolute paths."
               }
             },
             "additionalProperties": false
@@ -924,7 +928,7 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Local file paths to upload."
+                "description": "Local file paths to upload. Use ABSOLUTE paths: the plugin server runs with the home directory as its working directory, not your workspace, so a relative path would resolve against the wrong place."
               },
               "targetId": {
                 "type": "string",
@@ -942,6 +946,10 @@
                 "type": "boolean",
                 "description": "If true (the default) run silently without focusing Chrome. Pass false to focus Chrome and activate the tab so the user can watch.",
                 "default": true
+              },
+              "baseDir": {
+                "type": "string",
+                "description": "Directory relative paths resolve against. Defaults to the server working directory (the home directory) — prefer absolute paths."
               }
             },
             "required": [
