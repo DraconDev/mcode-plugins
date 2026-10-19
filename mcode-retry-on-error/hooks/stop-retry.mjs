@@ -123,6 +123,28 @@ function configNumber(key, envName, fallback) {
   return Math.floor(parsed);
 }
 
+/**
+ * Read a budget: a number of attempts, or a number of milliseconds.
+ *
+ * Unlike `configNumber`, an explicit `null` in the config file is not the
+ * same as an absent value: `null` means "no limit" (the plugin's original
+ * behaviour), while an absent value takes the finite default.
+ */
+function configLimit(key, envName, fallback) {
+  const fromEnv = process.env[envName];
+  if (fromEnv !== undefined && fromEnv !== '') {
+    const parsed = Number(fromEnv);
+    if (Number.isFinite(parsed) && parsed >= 0) return Math.floor(parsed);
+    return fallback;
+  }
+  const fromFile = CONFIG[key];
+  if (fromFile === null) return Number.POSITIVE_INFINITY;
+  if (fromFile === undefined || fromFile === '') return fallback;
+  const parsed = Number(fromFile);
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return Math.floor(parsed);
+}
+
 const BASE_DELAY_MS = configNumber('delayMs', 'MCODE_RETRY_DELAY_MS', 5_000);
 const BACKOFF_MULTIPLIER = (() => {
   const raw = CONFIG.backoffMultiplier ?? process.env.MCODE_RETRY_BACKOFF_MULTIPLIER;
