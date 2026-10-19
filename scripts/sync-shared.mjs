@@ -49,7 +49,7 @@ for (const plugin of plugins) {
 
   for (const file of sharedFiles) {
     const name = file.replace(/\.mjs$/, '');
-    const used = new RegExp(`from\\s+['"]\\./${name}['"]`).test(sources);
+    const used = new RegExp(`from\\s+['"]\\./${name}\\.mjs['"]`).test(sources);
     if (!used) {
       skipped.push(`${plugin}/server/${file}`);
       continue;
@@ -80,7 +80,6 @@ if (checkOnly) {
   for (const path of skipped) console.log(`SKIP   ${path} (not imported by that plugin)`);
   process.exit(drifted === 0 ? 0 : 1);
 }
-
 console.log(
   `shared modules synced across ${plugins.length} plugin(s): ${sharedFiles.join(', ')}`,
 );
