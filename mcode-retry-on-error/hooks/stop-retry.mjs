@@ -297,7 +297,7 @@ async function main() {
     mkdirSync(DATA_DIR, { recursive: true });
     writeFileSync(
       join(DATA_DIR, 'heartbeat.log'),
-      `${new Date().toISOString()} ${JSON.stringify(Object.keys(payload))}\n`,
+      `${new Date().toISOString()} event=${payload.hook_event_name} keys=${JSON.stringify(Object.keys(payload))}\n`,
       'utf8',
     );
   } catch {
