@@ -294,14 +294,21 @@ async function main() {
   const payload = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
 
   // Heartbeat: proves the hook process ran, whatever the decision is. Opt-in,
-  // because the hook fires on every turn end.
+  // because the hook fires on every turn end. It records what the hook can
+  // actually see, because that is what decides whether a failure is
+  // detectable at all: a provider error never reaches the transcript, so the
+  // payload is the only place it can show up.
   if (CONFIG.debug === true || DEBUG) {
     try {
       mkdirSync(DATA_DIR, { recursive: true });
+      const last = typeof payload.last_assistant_message === 'string'
+        ? payload.last_assistant_message
+        : '';
       appendFileSync(
         join(DATA_DIR, 'heartbeat.log'),
         `${new Date().toISOString()} event=${payload.hook_event_name} ` +
-          `keys=${JSON.stringify(Object.keys(payload))}\n`,
+          `session=${payload.session_id ?? '-'} cwd=${payload.cwd ?? '-'} ` +
+          `last_message=${JSON.stringify(last.slice(-200))}\n`,
         'utf8',
       );
     } catch {

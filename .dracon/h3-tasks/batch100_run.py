@@ -19,7 +19,12 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from batch100_generate import ITEMS  # noqa: E402
+import importlib  # noqa: E402
+
+ITEMS_MODULE = os.environ.get("MCODE_ITEMS_MODULE", "batch100_generate")
+MANIFEST_NAME = os.environ.get("MCODE_MANIFEST", "batch100_manifest.json")
+TAG = os.environ.get("MCODE_TAG", "batch100")
+ITEMS = importlib.import_module(ITEMS_MODULE).ITEMS  # noqa: E402
 
 DEST = "/home/dracon/Pictures"
 REC_DIR = "/home/dracon/Dev/mcode-plugins/.dracon/h3-tasks"
@@ -47,7 +52,7 @@ def build_args(items):
 
 
 def gen_batch(bi, batch, manifest_path):
-    args_path = os.path.join(REC_DIR, f"batch100_args_{bi}.json")
+    args_path = os.path.join(REC_DIR, f"{TAG}_args_{bi}.json")
     with open(args_path, "w", encoding="utf-8") as fh:
         json.dump(build_args(batch), fh, ensure_ascii=False, indent=2)
 
@@ -57,7 +62,7 @@ def gen_batch(bi, batch, manifest_path):
             "connector__matrix__generate_image",
             "--args-file", args_path,
         ])
-        raw_path = os.path.join(REC_DIR, f"batch100_gen_{bi}.json")
+        raw_path = os.path.join(REC_DIR, f"{TAG}_gen_{bi}.json")
         with open(raw_path, "w", encoding="utf-8") as fh:
             fh.write(proc.stdout)
         if proc.returncode != 0:
@@ -156,7 +161,7 @@ def main():
     stems = [i[0] for i in ITEMS]
     assert len(set(stems)) == 100, "duplicate filename stems"
 
-    manifest_path = os.path.join(REC_DIR, "batch100_manifest.json")
+    manifest_path = os.path.join(REC_DIR, MANIFEST_NAME)
     manifest = {"generated": [], "failed": [], "downloaded": []}
     if os.path.exists(manifest_path):
         with open(manifest_path, encoding="utf-8") as fh:
