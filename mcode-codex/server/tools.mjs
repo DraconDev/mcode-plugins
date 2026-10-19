@@ -45,10 +45,10 @@ function retryOptions(args) {
 }
 
 export function createTools({ workspaceCwd, sessionKey }) {
-  async function loadReferenceImages(paths) {
+  async function loadReferenceImages(paths, baseDir) {
     const images = [];
     for (const path of paths) {
-      const target = resolve(workspaceCwd, path);
+      const target = resolve(baseDir, path);
       const buffer = await readFile(target);
       const mimeType = MIME_BY_EXTENSION[extname(target).toLowerCase()];
       if (!mimeType) {
@@ -107,11 +107,20 @@ export function createTools({ workspaceCwd, sessionKey }) {
             type: 'array',
             items: { type: 'string' },
             description:
-              'Up to five local PNG/JPEG/WebP paths to edit from, relative to the workspace.',
+              'Up to five local PNG/JPEG/WebP paths to edit from. Relative paths resolve against ' +
+              'the server working directory, so use absolute paths.',
           },
           savePath: {
             type: 'string',
-            description: 'Optional path to also write the image to, relative to the workspace.',
+            description:
+              'Where to write the image. Use an ABSOLUTE path: the plugin server runs with the ' +
+              'home directory as its working directory, not your workspace, so a relative path ' +
+              'would land in the wrong place.',
+          },
+          baseDir: {
+            type: 'string',
+            description:
+              'Directory a relative savePath resolves against. Defaults to the server working directory.',
           },
           maxRetries: { type: 'number', description: 'Override the retry count (default 15).' },
         },
@@ -121,7 +130,8 @@ export function createTools({ workspaceCwd, sessionKey }) {
       handler: async (args) => {
         try {
           const credential = await resolveCodexCredential();
-          const inputImages = await loadReferenceImages(args.referenceImages ?? []);
+          const baseDir = args.baseDir ?? workspaceCwd;
+          const inputImages = await loadReferenceImages(args.referenceImages ?? [], baseDir);
 
           const image = await withRetry(
             () =>
