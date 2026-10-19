@@ -47,17 +47,28 @@ plugin's own backoff is already better than a manual retry loop.
 
 ## Bounding it
 
-The plugin is deliberately relentless, but it is not infinite in every sense. Two environment
-variables put a ceiling on it if you want one:
+The plugin is deliberately relentless, but it is not infinite in every sense. Configuration lives
+in a file, because mcode gives a hook process a whitelisted environment and shell variables never
+reach it:
 
-| Variable | Default | Effect |
-| --- | --- | --- |
-| `MCODE_RETRY_MAX_RETRIES` | unlimited | Attempts before giving up. |
-| `MCODE_RETRY_MAX_DURATION_MS` | unlimited | Total window before giving up. |
-| `MCODE_RETRY_DELAY_MS` | `5000` | Base backoff delay. |
-| `MCODE_RETRY_BACKOFF_MULTIPLIER` | `2` | Growth per attempt. |
-| `MCODE_RETRY_MAX_DELAY_MS` | `60000` | Cap on a single delay. |
-| `MCODE_RETRY_DISABLED` | unset | Set to `1` to turn the hook into a no-op. |
+```
+~/.minimax/v2/plugin-data/hooks/mcode-retry-on-error/config.json
+```
+
+```json
+{
+  "enabled": true,
+  "delayMs": 5000,
+  "backoffMultiplier": 2,
+  "maxDelayMs": 60000,
+  "maxRetries": null,
+  "maxDurationMs": null,
+  "debug": false
+}
+```
+
+`maxRetries` and `maxDurationMs` are `null` by default, meaning unlimited. `debug: true` appends
+a heartbeat line to `heartbeat.log` in the same directory on every turn end.
 
 Because the hook itself has a 10-second execution budget, a delay longer than that is trimmed to
 fit and the remainder is handed back to the model as a note. Tools that own their own retry
@@ -67,7 +78,8 @@ policy — the image and video generators — apply the full backoff themselves.
 
 - **The turn still ended.** The failure was not transient, the turn was aborted, or the user
   interjected. Check the failure text for a 429/5xx/timeout signature.
-- **It retried too eagerly.** Set `MCODE_RETRY_MAX_RETRIES` to a small number.
+- **It retried too eagerly.** Set `maxRetries` to a small number.
 - **It never fires.** Confirm the plugin is enabled (`mcode plugin list`) and that the session was
-  started after enabling it. Set `MCODE_RETRY_DEBUG=1` to have the hook narrate its decisions on
-  stderr.
+  started after enabling it. Set `"debug": true` and look at
+  `~/.minimax/v2/plugin-data/hooks/mcode-retry-on-error/heartbeat.log` — a line per turn end means
+  the hook is running.
