@@ -11,7 +11,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,13 +27,13 @@ const check = (label, ok, detail = '') => {
 };
 
 /** Feed the hook a PostToolUse payload and return what it decided. */
-async function runHook(payload, { env = {} } = {}) {
-  const home = mkdtempSync(join(tmpdir(), 'post-tool-hook-test-'));
+async function runHook(payload, { env = {}, home = null } = {}) {
+  const sessionHome = home ?? mkdtempSync(join(tmpdir(), 'post-tool-hook-test-'));
   const data = {
     hook_event_name: 'PostToolUse',
     session_id: 'mvs_test_session_0001',
     turn_id: 'turn_1',
-    cwd: home,
+    cwd: sessionHome,
     tool_name: 'bash',
     tool_input: { command: 'curl https://example.com' },
     tool_response: '',
@@ -43,9 +43,9 @@ async function runHook(payload, { env = {} } = {}) {
   const child = spawn(process.execPath, [HOOK], {
     env: {
       ...process.env,
-      HOME: home,
+      HOME: sessionHome,
       PLUGIN_ROOT,
-      PLUGIN_DATA: join(home, 'plugin-data'),
+      PLUGIN_DATA: join(sessionHome, 'plugin-data'),
       MCODE_RETRY_DELAY_MS: '0',
       ...env,
     },
@@ -69,8 +69,20 @@ async function runHook(payload, { env = {} } = {}) {
   } catch {
     // leave null
   }
-  return { parsed, out, err, code };
+  return { parsed, out, err, code, home: sessionHome };
 }
+
+/** The per-session attempt counter the hook keeps. */
+const counterFile = (home) =>
+  join(home, 'plugin-data', 'tool-mvs_test_session_0001.json');
+
+const readCounter = (home) => {
+  try {
+    return JSON.parse(readFileSync(counterFile(home), 'utf8'));
+  } catch {
+    return null;
+  }
+};
 
 // 1. A rate-limited tool call is retried.
 {
