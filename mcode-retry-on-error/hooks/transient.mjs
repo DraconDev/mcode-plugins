@@ -57,6 +57,13 @@ const FAILURE_PATTERNS = [
   /\btraceback\b/i,
   /\bENOENT\b/,
   /\bEACCES\b/,
+  // An HTTP error response is a failure on its own. The status code has to be
+  // paired with a reason phrase, so a successful command that happens to print
+  // "429" is not mistaken for one.
+  /\bHTTP\/\d(?:\.\d)?\s+[45]\d\d\b/i,
+  /\bHTTP\s+[45]\d\d\b/i,
+  /\bstatus(?:\s+code)?\s*[:=]\s*[45]\d\d\b/i,
+  /\b[45]\d\d\s+(?:too\s+many\s+requests|unauthorized|forbidden|not\s+found|bad\s+request|internal\s+server\s+error|service\s+unavailable|bad\s+gateway|gateway\s+timeout|request\s+timeout)\b/i,
 ];
 
 /** Pull readable text out of a tool response, whatever shape it arrives in. */
