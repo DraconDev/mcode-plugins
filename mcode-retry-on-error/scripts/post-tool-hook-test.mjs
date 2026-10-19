@@ -278,6 +278,118 @@ const readCounter = (home) => {
   );
 }
 
+// 16. A deterministic failure is not retried. These are the shapes that
+//     made up every transient-looking hit in a scan of 285 real sessions:
+//     the host rejected the arguments, the host refused the command, or the
+//     file is simply not there. An identical retry fails the same way.
+const DETERMINISTIC = [
+  ['a validation failure', 'Validation failed for tool "bash":\n  - timeout: must be <= 2147483'],
+  [
+    'a validation failure carrying a status code in the summary',
+    'Validation failed for tool "update_goal":\n  - summary: must not have more than 2000 characters\n\nReceived arguments:\n{\n  "summary": "the 429 rate limit and the quota policy"\n}',
+  ],
+  ['a permission failure', 'Permission denied for bash: Blocked: command exceeded quota policy'],
+  ['a missing file', 'ENOENT: no such file or directory, open "x.txt"'],
+];
+for (const [label, toolResponse] of DETERMINISTIC) {
+  const { parsed } = await runHook({ tool_response: toolResponse });
+  check(
+    `${label} is not retried`,
+    parsed === null,
+    parsed ? JSON.stringify(parsed).slice(0, 80) : 'no output',
+  );
+}
+
+// 17. The genuine transient failures are still retried.
+const GENUINE = [
+  'HTTP 429 Too Many Requests',
+  '429 Too Many Requests',
+  '503 Service Unavailable',
+  'Error: upstream responded 503 while fetching the model',
+  'rate limit exceeded',
+  'ECONNRESET',
+  'fetch failed',
+  'socket hang up',
+];
+for (const toolResponse of GENUINE) {
+  const { parsed } = await runHook({ tool_response: toolResponse });
+  check(
+    `"${toolResponse.slice(0, 40)}" is retried`,
+    parsed?.hookSpecificOutput?.additionalContext !== undefined,
+    parsed ? 'matched' : 'no output',
+  );
+}
+
+// 18. A successful call resets the attempt counter, so the next failure is
+//     announced as attempt 1 and not as the next number in a count that only
+//     ever grew.
+{
+  const home = mkdtempSync(join(tmpdir(), 'post-tool-hook-test-'));
+  await runHook({ tool_response: 'HTTP 429 Too Many Requests' }, { home });
+  const afterFailure = readCounter(home);
+  await runHook({ tool_response: 'all good' }, { home });
+  const afterSuccess = readCounter(home);
+  const second = await runHook({ tool_response: 'HTTP 429 Too Many Requests' }, { home });
+  const context = second.parsed?.hookSpecificOutput?.additionalContext ?? '';
+  check(
+    'a successful call resets the counter',
+    afterFailure?.attempts === 1 && afterSuccess?.attempts === 0,
+    `afterFailure=${JSON.stringify(afterFailure)} afterSuccess=${JSON.stringify(afterSuccess)}`,
+  );
+  check(
+    'the next failure is attempt 1 again',
+    /attempt 1\)/.test(context),
+    context.slice(0, 90),
+  );
+}
+
+// 19. The counter is written atomically: the value lands in one whole file
+//     and no temporary file is left behind for a later run to trip over.
+{
+  const home = mkdtempSync(join(tmpdir(), 'post-tool-hook-test-'));
+  await runHook({ tool_response: 'HTTP 429 Too Many Requests' }, { home });
+  const files = readdirSync(join(home, 'plugin-data'));
+  check(
+    'no temporary file is left behind',
+    files.every((name) => !name.endsWith('.tmp')),
+    files.join(', '),
+  );
+  check(
+    'the counter file is whole',
+    readCounter(home)?.attempts === 1,
+    JSON.stringify(readCounter(home)),
+  );
+}
+
+// 20. The injected detail keeps the cause. The cause of a failure is at the
+//     start of the response; the tail is the command's own output.
+{
+  const long = `HTTP 429 Too Many Requests: rate limit exceeded\n${'x'.repeat(600)}`;
+  const { parsed } = await runHook({ tool_response: long });
+  const context = parsed?.hookSpecificOutput?.additionalContext ?? '';
+  check(
+    'the injected detail keeps the cause of a long response',
+    /429/.test(context) && /rate limit/i.test(context),
+    context.slice(0, 100),
+  );
+}
+
+// 21. A delay longer than the hook's budget is clamped, so the hook still
+//     writes its output instead of being killed before the first byte.
+{
+  const started = Date.now();
+  const { parsed, err } = await runHook(
+    { tool_response: 'HTTP 429 Too Many Requests' },
+    { env: { MCODE_RETRY_DELAY_MS: '11000' } },
+  );
+  const elapsed = Date.now() - started;
+  check(
+    'a delay past the budget is clamped and the output still arrives',
+    parsed?.hookSpecificOutput?.additionalContext !== undefined && elapsed < 10_000,
+    `elapsed=${elapsed}ms err=${err.trim().slice(0, 90)}`,
+  );
+}
+
 const failed = results.filter((r) => !r.ok);
 process.stdout.write(`\n${results.length - failed.length}/${results.length} passed\n`);
 process.exit(failed.length === 0 ? 0 : 1);
