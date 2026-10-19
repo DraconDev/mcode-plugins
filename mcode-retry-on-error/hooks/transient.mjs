@@ -104,10 +104,16 @@ export function textOf(content) {
   return String(content);
 }
 
-/** Does this text match a signature that a later attempt could get past? */
+/**
+ * Does this text match a signature that a later attempt could get past?
+ *
+ * A strong signal is enough on its own. A bare status number only counts
+ * when the text also reads like a failure.
+ */
 export function isTransient(text) {
   if (!text) return false;
-  return TRANSIENT_PATTERNS.some((pattern) => pattern.test(text));
+  if (STRONG_TRANSIENT.some((pattern) => pattern.test(text))) return true;
+  return looksFailed(text) && WEAK_TRANSIENT.test(text);
 }
 
 /** Does this text read like a failure report rather than a result? */
