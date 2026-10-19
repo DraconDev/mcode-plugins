@@ -15,7 +15,7 @@ there.
 | `mcode-codex/` | ChatGPT subscription (Codex) image generation and editing, using the credential pi already holds. |
 | `mcode-retry-on-error/` | Continue a turn that ended in an error or a rate-limited tool call, with backoff. |
 | `scripts/apply-mcode-rm-shim-fix.mjs` | Repairs a broken recoverable-delete shim in `@minimax-ai/code` 0.6.12. See [Runtime repair](#runtime-repair). |
-| `scripts/apply-mcode-llm-retry-policy.mjs` | Raises the provider retry budget from 5 to 15. See [Runtime repair](#runtime-repair-the-provider-retry-budget). |
+| `scripts/apply-mcode-llm-retry-policy.mjs` | Raises the provider retry budget to six hours and makes spent quotas retryable. See [Runtime repair](#runtime-repair-the-provider-retry-budget). |
 | `shared/` | The retry core, the MCP stdio server and the workspace resolver, copied into each plugin that uses them. |
 
 ## Install
@@ -65,8 +65,8 @@ Measured: across 7,185 assistant messages in a day's transcripts, the `stopReaso
 all. Forcing a provider failure with an unreachable endpoint confirmed it: the run failed and the
 hook never ran.
 
-mcode's own retry of that layer had a hardcoded budget of five. It is raised to fifteen by
-`scripts/apply-mcode-llm-retry-policy.mjs` — see
+mcode's own retry of that layer had a hardcoded budget of five — about half a minute of waiting, then
+the turn dies. It is raised to six hours by `scripts/apply-mcode-llm-retry-policy.mjs` — see
 [Runtime repair](#runtime-repair-the-provider-retry-budget).
 
 ## Credentials
