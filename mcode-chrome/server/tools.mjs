@@ -15,7 +15,7 @@
  */
 
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, extname, resolve } from 'node:path';
 
 import { DEFAULT_TIMEOUT_MS } from './bridge.mjs';
 import { assertAuthorized, authStatus, authorize, revoke } from './auth.mjs';

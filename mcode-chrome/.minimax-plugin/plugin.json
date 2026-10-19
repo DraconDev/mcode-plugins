@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../schemas/plugin-v1.schema.json",
+  "$schema": "../../schemas/plugin-v1.schema.json",
   "schemaVersion": 1,
   "name": "mcode-chrome",
   "displayName": "MCode Chrome",

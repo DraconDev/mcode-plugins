@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/DraconDev/mcode-plugins/schemas/plugin-v1.schema.json",
+  "title": "MiniMax Code local plugin manifest",
+  "description": "The subset of the plugin manifest format used by the plugins in this repository. MiniMax Code reads the manifest itself; this schema exists so editors and contributors can validate a change before installing it.",
+  "type": "object",
+  "required": ["schemaVersion", "name", "version", "description"],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path to this schema, relative to the manifest."
+    },
+    "schemaVersion": {
+      "const": 1,
+      "description": "The manifest format version. MiniMax Code 0.6.12 and newer read version 1."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "The plugin's identifier. Also the directory name under ~/.minimax/plugins/."
+    },
+    "displayName": {
+      "type": "string",
+      "description": "The name shown in the plugin list."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+",
+      "description": "Semantic version of the plugin."
+    },
+    "description": {
+      "type": "string",
+      "description": "One or two sentences, shown in the plugin list and used for discovery."
+    },
+    "author": {
+      "type": "string"
+    },
+    "icon": {
+      "type": "string",
+      "description": "Path to a .webp icon, relative to the manifest."
+    },
+    "category": {
+      "type": "string",
+      "description": "The marketplace category. A plugin with an unknown category is skipped silently."
+    },
+    "exampleQueries": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Example prompts. A manifest with none of these is skipped silently."
+    },
+    "apps": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "mcpServers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to MCP server definitions, relative to the manifest."
+    },
+    "skills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to SKILL.md files, relative to the manifest."
+    },
+    "hooks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to hook definitions, relative to the manifest."
+    },
+    "hostBindings": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

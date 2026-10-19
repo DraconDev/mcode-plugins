@@ -10,7 +10,7 @@
  */
 
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 import {
   DEFAULT_IMAGE_MODEL,
@@ -62,6 +62,70 @@ function credentialsFor(name) {
     );
   }
   return { endpoint, key, source };
+}
+
+/**
+ * True when `target` is `base` itself or lies underneath it.
+ *
+ * The comparison is lexical on already-resolved paths: `relative()` yields a
+ * path that starts with `..` when the target escapes the base, and an
+ * absolute path when the two live on different roots.
+ */
+function isInside(base, target) {
+  const rel = relative(base, target);
+  if (rel === '') return true;
+  if (isAbsolute(rel)) return false;
+  return rel !== '..' && !rel.startsWith(`..${sep}`);
+}
+
+/**
+ * Resolve the directory a relative path is anchored to.
+ *
+ * `baseDir` is an override for *where inside the workspace* a relative path
+ * lands, not a way to redirect the write to an arbitrary directory, so it
+ * has to stay under the workspace.
+ *
+ * @param {string|undefined} baseDir
+ * @param {string} workspaceCwd
+ * @returns {string} an absolute path
+ */
+export function resolveBaseDir(baseDir, workspaceCwd) {
+  const workspace = resolve(workspaceCwd);
+  if (baseDir === undefined || baseDir === null || baseDir === '') return workspace;
+  const base = isAbsolute(baseDir) ? baseDir : resolve(workspace, baseDir);
+  if (!isInside(workspace, base)) {
+    throw new Error(
+      `baseDir must stay inside the workspace (${workspace}). Refused: ${baseDir}`,
+    );
+  }
+  return base;
+}
+
+/**
+ * Resolve a caller-supplied path against the workspace.
+ *
+ * A relative path is resolved against the base and has to stay inside it, so
+ * `../../.ssh/authorized_keys` is refused instead of escaping the workspace.
+ * An absolute path is taken at face value, because that is a documented and
+ * deliberate feature — "an absolute path is unambiguous and preferred".
+ *
+ * @param {object} options
+ * @param {string} options.path
+ * @param {string} [options.baseDir]
+ * @param {string} options.workspaceCwd
+ * @param {string} [options.label] - what the path is, for the error message
+ * @returns {string} an absolute path
+ */
+export function resolveToolPath({ path, baseDir, workspaceCwd, label = 'path' }) {
+  const base = resolveBaseDir(baseDir, workspaceCwd);
+  if (isAbsolute(path)) return path;
+  const target = resolve(base, path);
+  if (!isInside(base, target)) {
+    throw new Error(
+      `${label} must stay inside the workspace (${base}). Refused: ${path}`,
+    );
+  }
+  return target;
 }
 
 /**
@@ -146,6 +210,17 @@ const TOOL_DEFS = [
         const { endpoint, key } = credentialsFor(args.endpoint ?? 'agnes');
         const model = args.model ?? DEFAULT_IMAGE_MODEL;
 
+        // The output path is resolved before the call, so a path that escapes
+        // the workspace is refused without spending a generation.
+        const target = args.savePath
+          ? resolveToolPath({
+              path: args.savePath,
+              baseDir: args.baseDir,
+              workspaceCwd,
+              label: 'savePath',
+            })
+          : null;
+
         const image = await requestImage({
           baseUrl: endpoint.baseUrl,
           apiKey: key,
@@ -161,8 +236,7 @@ const TOOL_DEFS = [
         const base64 = image.dataUrl.replace(/^data:[^;]+;base64,/, '');
         blocks.push({ type: 'image', data: base64, mimeType: image.mimeType });
 
-        if (args.savePath) {
-          const target = resolve(args.baseDir ?? workspaceCwd, args.savePath);
+        if (target) {
           await mkdir(dirname(target), { recursive: true });
           await writeFile(target, Buffer.from(base64, 'base64'));
           blocks.push({ type: 'text', text: `Saved to ${target}.` });

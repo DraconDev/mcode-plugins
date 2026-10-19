@@ -46,7 +46,60 @@ function secretLength(value) {
   return typeof value;
 }
 
-/** Redact secret-shaped values before anything is printed. */
+/**
+ * Is this a `[name, value]` header pair?
+ *
+ * `Headers.entries()` yields exactly that shape, so a fetch response stores
+ * its headers as an array of pairs rather than as an object with keys.
+ */
+function isHeaderPair(value) {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    typeof value[0] === 'string' &&
+    typeof value[1] === 'string'
+  );
+}
+
+/** Redact a `[name, value]` header pair by its name. */
+function redactHeaderPair(pair, depth) {
+  const [name, value] = pair;
+  if (SECRET_KEY.test(name)) return [name, `[REDACTED ${secretLength(value)}]`];
+  return [name, redact(value, depth + 1)];
+}
+
+/**
+ * Redact one raw header block, e.g. "content-type: text/html\r\nx-csrf-token: …".
+ *
+ * The block is split on CRLF first so every header can be matched by its own
+ * name — the block itself has no secret-shaped key to match on.
+ */
+function redactHeaderBlock(text) {
+  const separator = text.includes('\r\n') ? '\r\n' : '\n';
+  return text
+    .split(/\r\n|\n/)
+    .map((line) => {
+      const colon = line.indexOf(':');
+      if (colon < 0) return line;
+      const name = line.slice(0, colon).trim();
+      if (!name || !SECRET_KEY.test(name)) return line;
+      const value = line.slice(colon + 1).trim();
+      return `${line.slice(0, colon + 1)} [REDACTED ${secretLength(value)}]`;
+    })
+    .join(separator);
+}
+
+/**
+ * Redact secret-shaped values before anything is printed.
+ *
+ * The companion extension stores response headers in three different shapes,
+ * and only one of them has secret-shaped *keys*:
+ *   - fetch:  [["x-api-key", "sk-live-…"], …]   (Headers.entries())
+ *   - XHR:    "x-api-key: sk-live-…\r\n…"        (getAllResponseHeaders())
+ *   - object: {"x-api-key": "sk-live-…"}
+ * The first two carry no key to match on, so they are normalised into
+ * name/value pairs before the secret check runs.
+ */
 export function redact(value, depth = 0) {
   if (depth > 12) return '[TRUNCATED-DEPTH]';
   if (typeof value === 'string') {
@@ -58,11 +111,22 @@ export function redact(value, depth = 0) {
     if (value.length > 2000) return `${value.slice(0, 2000)}…[TRUNCATED ${value.length} chars]`;
     return value;
   }
-  if (Array.isArray(value)) return value.map((entry) => redact(entry, depth + 1));
+  if (Array.isArray(value)) {
+    if (isHeaderPair(value)) return redactHeaderPair(value, depth);
+    return value.map((entry) => redact(entry, depth + 1));
+  }
   if (value && typeof value === 'object') {
-    const out = {};
+    // A null-prototype object: assigning `__proto__` on a plain object hits
+    // the inherited prototype setter, which silently drops the entry.
+    const out = Object.create(null);
     for (const [key, entry] of Object.entries(value)) {
-      out[key] = SECRET_KEY.test(key) ? `[REDACTED ${secretLength(entry)}]` : redact(entry, depth + 1);
+      if (key === HEADER_BLOCK_KEY && typeof entry === 'string') {
+        out[key] = redactHeaderBlock(entry);
+        continue;
+      }
+      out[key] = SECRET_KEY.test(key)
+        ? `[REDACTED ${secretLength(entry)}]`
+        : redact(entry, depth + 1);
     }
     return out;
   }
@@ -81,6 +145,26 @@ function rectText(rect) {
 }
 
 /**
+ * Render one entry of the companion's snapshot diff.
+ *
+ * `diffSnapshot()` returns objects (`{kind:'url',before,after}`,
+ * `{kind:'textChanged'}`, …), so a plain template string would print
+ * "[object Object]".
+ */
+function formatChange(change) {
+  if (!change || typeof change !== 'object') return compactLine(change, 80);
+  const kind = change.kind ?? 'change';
+  if (change.before === undefined && change.after === undefined) return kind;
+  const before =
+    change.before === undefined || change.before === null
+      ? '(none)'
+      : compactLine(change.before, 80);
+  const after =
+    change.after === undefined || change.after === null ? '(none)' : compactLine(change.after, 80);
+  return `${kind}: ${before} → ${after}`;
+}
+
+/**
  * Render an accessibility snapshot as a compact, agent-friendly report: page
  * identity, layout, forms, visible actions, text snippets, and what changed
  * since the previous snapshot. `mode`/`query` are there to zoom in instead of
@@ -94,9 +178,21 @@ export function formatSnapshot(snapshot) {
   lines.push(snapshot.url || '');
   if (snapshot.mode) lines.push(`mode: ${snapshot.mode}`);
 
-  if (Array.isArray(snapshot.changes) && snapshot.changes.length) {
+  // The extension reports changes under `snapshot.diff` — `diffSnapshot()`
+  // returns { changes, added, removed, updated }. There is no top-level
+  // `changes` key, so reading that would leave this section permanently empty.
+  const diff = snapshot.diff ?? null;
+  const changes = Array.isArray(diff?.changes) ? diff.changes : [];
+  if (changes.length || diff?.firstSnapshot) {
     lines.push('\n## Changed since last snapshot');
-    for (const item of snapshot.changes.slice(0, 10)) lines.push(`- ${item}`);
+    if (diff.firstSnapshot) lines.push('- first snapshot: nothing to compare against yet');
+    for (const item of changes.slice(0, 10)) lines.push(`- ${formatChange(item)}`);
+    const added = diff.added?.length ?? 0;
+    const removed = diff.removed?.length ?? 0;
+    const updated = diff.updated?.length ?? 0;
+    if (added || removed || updated) {
+      lines.push(`- elements: ${added} added, ${removed} removed, ${updated} updated`);
+    }
   }
 
   if (Array.isArray(snapshot.matches) && snapshot.matches.length) {
