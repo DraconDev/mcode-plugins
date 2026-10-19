@@ -186,6 +186,54 @@ async function runHook(payload, { env = {} } = {}) {
   check('an odd payload does not crash the hook', code === 0, `code=${code} err=${err.slice(0, 80)}`);
 }
 
+// 11. A structured failure marker in the tool result is authoritative.
+{
+  const { parsed } = await runHook({
+    tool_response: JSON.stringify({
+      details: { execution: { status: 'failed', exitCode: 1, message: 'Command exited with code 1' } },
+      content: [{ type: 'text', text: 'HTTP 429 Too Many Requests' }],
+    }),
+  });
+  check(
+    'a structured failure marker is detected',
+    parsed?.hookSpecificOutput?.additionalContext !== undefined,
+    parsed ? 'matched' : 'no output',
+  );
+}
+
+// 12. A tool result that reports success is never retried, even with a 429 in it.
+{
+  const { parsed } = await runHook({
+    tool_response: JSON.stringify({
+      status: 'succeeded',
+      content: [{ type: 'text', text: 'HTTP 429 Too Many Requests' }],
+    }),
+  });
+  check(
+    'an explicit success wins over the text',
+    parsed === null,
+    parsed ? JSON.stringify(parsed).slice(0, 80) : 'no output',
+  );
+}
+
+// 13. A file whose contents mention a 429 is not a failure.
+{
+  const { parsed } = await runHook({
+    tool_name: 'read',
+    tool_response: JSON.stringify({
+      content: [{ type: 'text', text: 'echo "HTTP 429 Too Many Requests"\nexit 7\n' }],
+      numLines: 2,
+      startLine: 1,
+      totalLines: 2,
+    }),
+  });
+  check(
+    'a read of a 429-mentioning file is not a failure',
+    parsed === null,
+    parsed ? JSON.stringify(parsed).slice(0, 80) : 'no output',
+  );
+}
+
 const failed = results.filter((r) => !r.ok);
 process.stdout.write(`\n${results.length - failed.length}/${results.length} passed\n`);
 process.exit(failed.length === 0 ? 0 : 1);
