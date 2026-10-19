@@ -33,9 +33,28 @@ const plugins = readdirSync(REPO_ROOT, { withFileTypes: true })
   .filter((name) => existsSync(join(REPO_ROOT, name, 'server')));
 
 let drifted = 0;
+let skipped = [];
+
 for (const plugin of plugins) {
   const serverDir = join(REPO_ROOT, plugin, 'server');
+
+  // Only the modules a plugin actually imports are copied. A plugin that
+  // does not use the retry core should not ship a copy of it: an unused file
+  // in an installed plugin is dead weight, and it is one more thing that can
+  // drift from the source.
+  const sources = readdirSync(serverDir)
+    .filter((file) => file.endsWith('.mjs'))
+    .map((file) => readFileSync(join(serverDir, file), 'utf8'))
+    .join('\n');
+
   for (const file of sharedFiles) {
+    const name = file.replace(/\.mjs$/, '');
+    const used = new RegExp(`from\\s+['"]\\./${name}['"]`).test(sources);
+    if (!used) {
+      skipped.push(`${plugin}/server/${file}`);
+      continue;
+    }
+
     const source = join(SHARED_DIR, file);
     const target = join(serverDir, file);
     const same =
@@ -58,9 +77,11 @@ if (checkOnly) {
       ? `all shared modules are in sync across ${plugins.length} plugin(s)`
       : `${drifted} shared module copy/copies are out of sync`,
   );
+  for (const path of skipped) console.log(`SKIP   ${path} (not imported by that plugin)`);
   process.exit(drifted === 0 ? 0 : 1);
 }
 
 console.log(
   `shared modules synced across ${plugins.length} plugin(s): ${sharedFiles.join(', ')}`,
 );
+for (const path of skipped) console.log(`skipped ${path} (not imported by that plugin)`);
