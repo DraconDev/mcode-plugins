@@ -40,17 +40,17 @@ transcript, and the `Stop` hook does not fire for it — the run aborts before a
 MiniMax Code retries that layer internally, and its budget has been raised on this machine from
 five retries to six hours of retrying by `scripts/apply-mcode-llm-retry-policy.mjs` in the plugin
 repository — the first attempts stay close together, then it settles to one every five minutes
-for as long as it takes. The goal runtime adds a second, longer-horizon layer: it parks the
-session as `Usage limited — Resume after provider access recovers` and resumes it when the
-provider allows.
+for as long as it takes. A spent quota, exhausted credits and a 5xx are retried the same way;
+they used to be terminal, which meant the turn died on the first response instead of waiting for
+the reset. The goal runtime adds a second, longer-horizon layer: it parks the session as
+`Usage limited — Resume after provider access recovers` and resumes it when the provider allows.
 
-Note the difference between a throttled provider and an exhausted quota. `Code: 50150` is a
-token-per-minute limit and is retried. A genuinely exhausted quota ends the turn immediately and
-nothing retries it — that is correct, and waiting for the reset is the right answer.
+An authentication failure is still terminal, and that is deliberate — a bad credential will not
+fix itself, so waiting six hours for it is pointless.
 
-So if you see a rate limit, the recovery is already running. Do not try to work around it by hand
-and do not change your approach. If the turn genuinely ended and the user asks you to continue, say
-what you were doing and pick it up again.
+So if you see a rate limit or a spent quota, the recovery is already running. Do not try to work
+around it by hand and do not change your approach. If the turn genuinely ended and the user asks
+you to continue, say what you were doing and pick it up again.
 
 ## How to work with it
 

@@ -29,17 +29,19 @@ hook never fires, because the run aborts before any turn completes. This was mea
 with an unreachable endpoint confirmed it: the run failed and the hook never ran.
 
 MiniMax Code handles that layer itself, by retrying the provider request internally — but with a
-hardcoded budget of five retries, six attempts over about twenty seconds of waiting. That budget
-is not configurable, so `scripts/apply-mcode-llm-retry-policy.mjs` in the parent repository raises
-it to six hours of retrying by patching the constant in the bundle. The goal runtime adds a
-second, longer-horizon layer on top: it parks the session as `Usage limited — Resume after
-provider access recovers` and picks it up again when the provider allows.
+hardcoded budget of five retries, six attempts over about twenty seconds of waiting, and with
+several provider errors classified as terminal so that nothing retries them at all. Both are
+fixed by `scripts/apply-mcode-llm-retry-policy.mjs` in the parent repository, which raises the
+budget to six hours of retrying and makes a spent quota, exhausted credits and a 5xx retryable.
+The goal runtime adds a second, longer-horizon layer on top: it parks the session as
+`Usage limited — Resume after provider access recovers` and picks it up again when the provider
+allows.
 
 The error that matters here is `Code: 50150`, which is `LLM_TPM_RATE_LIMITED` — a token-per-minute
-limit, which the retry classifier treats as retryable. Two neighbouring codes are terminal and are
-never retried by anything: `42212` (`USAGE_LIMIT_EXCEEDED`) and `50110`
-(`LLM_CREDITS_EXHAUSTED`). Those end the turn and the goal runtime parks the session, which is the
-right behaviour for a quota that is genuinely gone.
+limit, which the retry classifier treats as retryable. `42212` (`USAGE_LIMIT_EXCEEDED`) and
+`50110` (`LLM_CREDITS_EXHAUSTED`) were also terminal until the patch: those are the quotas that
+reset on a timer, and giving up on the first response was exactly wrong. An authentication
+failure stays terminal — a bad credential will not fix itself.
 
 So a provider rate limit is retried by mcode with a raised budget, and this plugin covers the
 failures mcode cannot see: tool calls.
