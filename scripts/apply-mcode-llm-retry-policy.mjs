@@ -30,23 +30,28 @@
  *
  * 2. The retryable-error classifier
  * ----------------------------------
- * The provider's own protocol codes are classified by `xqe`, and two of them
- * are hardcoded as terminal:
+ * The provider's own protocol codes are classified by `xqe`, and several of
+ * them are hardcoded as terminal:
  *
  *     42212  USAGE_LIMIT_EXCEEDED    a quota that is spent
  *     50110  LLM_CREDITS_EXHAUSTED   credits that are spent
  *
  * A terminal error ends the turn immediately: no retry, no backoff, nothing.
- * That is wrong for a quota that resets on a timer. The patch moves both
- * behind the retryable path, where the budget above applies:
+ * That is wrong for a quota that resets on a timer. A plain 5xx is terminal
+ * too, which is stranger still — MiniMax Code retries 429 and 529 but gives up
+ * on 500, 502 and 504.
+ *
+ * The patch moves all three behind the retryable path, where the budget above
+ * applies:
  *
  *   - upstream status 2056 or 2067  -> 42212, now retried
  *   - upstream status 402, or provider message code 1008 -> 50110, now retried
+ *   - any 5xx status -> now retried
  *
  * Everything else is left exactly as it was. An authentication failure
  * (401/403) stays terminal — a bad credential will not fix itself, and
  * retrying it for six hours is pointless. So do a content filter, a refusal,
- * and an explicit abort by the user.
+ * a bad request, and an explicit abort by the user.
  *
  * This is a policy change to a third-party install, not a bug fix. It is
  * reverted by `mcode update`, so re-run this script afterwards. The original
@@ -116,14 +121,15 @@ const QUOTA_GUARD_SOURCE =
   '||n==="credits_exhausted"||n==="auth")return{retryable:!1,reason:n};';
 
 /**
- * The replacement: a spent quota or exhausted credits becomes retryable, and
- * the genuinely terminal cases stay terminal.
+ * The replacement: a spent quota, exhausted credits and a server error become
+ * retryable, and the genuinely terminal cases stay terminal.
  */
 const QUOTA_REPLACEMENT =
   'if(t.explicitAbort||t.signals.has("content_filter")||t.signals.has("refusal")||n==="abort"||n==="auth")' +
   'return{retryable:!1,reason:n};' +
   'if(t.existingProtocolCode===Ir.USAGE_LIMIT_EXCEEDED||t.existingProtocolCode===Ir.LLM_CREDITS_EXHAUSTED' +
-  '||t.signals.has("usage_limit")||t.signals.has("credits_exhausted")||kqe(t.upstreamStatusCode)||g_(t)===402)' +
+  '||t.signals.has("usage_limit")||t.signals.has("credits_exhausted")||kqe(t.upstreamStatusCode)||g_(t)===402' +
+  '||(g_(t)!==void 0&&g_(t)>=500))' +
   'return{retryable:!0,reason:n};';
 
 const checkOnly = process.argv.includes('--check');
