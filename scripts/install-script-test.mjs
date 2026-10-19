@@ -10,7 +10,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,6 +25,18 @@ const check = (label, ok, detail = '') => {
   process.stdout.write(`${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? ` — ${detail}` : ''}\n`);
 };
 
+const sandbox = mkdtempSync(join(tmpdir(), 'mcode-install-test-'));
+
+// The installer calls `mcode plugin list` and `mcode plugin add` to register
+// the plugin. Left alone, the real CLI would bootstrap a whole runtime data
+// directory inside the sandbox and register the plugin in the user's real
+// marketplace — a test must not do either. A stub keeps it hermetic.
+const stubBin = join(sandbox, 'bin');
+mkdirSync(stubBin, { recursive: true });
+const stubMcode = join(stubBin, 'mcode');
+writeFileSync(stubMcode, '#!/bin/sh\n# stub: list nothing, accept any add\nexit 0\n');
+chmodSync(stubMcode, 0o755);
+
 /**
  * Run the installer with a sandboxed data directory.
  *
@@ -35,7 +47,7 @@ function install(args, dataDir) {
   try {
     const stdout = execFileSync('bash', [INSTALLER, ...args], {
       encoding: 'utf8',
-      env: { ...process.env, MINIMAX_DATA_DIR: dataDir },
+      env: { ...process.env, MINIMAX_DATA_DIR: dataDir, PATH: `${stubBin}:${process.env.PATH}` },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     return { code: 0, stdout, stderr: '' };
