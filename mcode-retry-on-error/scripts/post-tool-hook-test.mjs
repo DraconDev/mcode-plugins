@@ -79,8 +79,9 @@ async function runHook(payload, { env = {} } = {}) {
   });
   check(
     'a 429 tool failure is retried',
-    parsed?.decision === 'block' && /retry/i.test(parsed?.reason ?? ''),
-    parsed ? `decision=${parsed.decision}` : 'no output',
+    parsed?.hookSpecificOutput?.additionalContext !== undefined &&
+      /retry/i.test(parsed.hookSpecificOutput.additionalContext),
+    parsed ? JSON.stringify(parsed).slice(0, 80) : 'no output',
   );
 }
 
@@ -91,8 +92,8 @@ async function runHook(payload, { env = {} } = {}) {
   });
   check(
     'a 503 tool failure is retried',
-    parsed?.decision === 'block',
-    parsed ? `decision=${parsed.decision}` : 'no output',
+    parsed?.hookSpecificOutput?.additionalContext !== undefined,
+    parsed ? JSON.stringify(parsed).slice(0, 80) : 'no output',
   );
 }
 
@@ -103,8 +104,8 @@ async function runHook(payload, { env = {} } = {}) {
   });
   check(
     'a timeout is retried',
-    parsed?.decision === 'block',
-    parsed ? `decision=${parsed.decision}` : 'no output',
+    parsed?.hookSpecificOutput?.additionalContext !== undefined,
+    parsed ? JSON.stringify(parsed).slice(0, 80) : 'no output',
   );
 }
 
@@ -151,8 +152,8 @@ async function runHook(payload, { env = {} } = {}) {
   });
   check(
     'a structured response is matched',
-    parsed?.decision === 'block',
-    parsed ? `decision=${parsed.decision}` : 'no output',
+    parsed?.hookSpecificOutput?.additionalContext !== undefined,
+    parsed ? JSON.stringify(parsed).slice(0, 80) : 'no output',
   );
 }
 
@@ -162,10 +163,11 @@ async function runHook(payload, { env = {} } = {}) {
     tool_name: 'generate_image',
     tool_response: 'HTTP 429 rate limit exceeded',
   });
+  const context = parsed?.hookSpecificOutput?.additionalContext ?? '';
   check(
     'the instruction asks for the same operation again',
-    /same operation|again/i.test(parsed?.reason ?? '') && /generate_image/.test(parsed?.reason ?? ''),
-    parsed ? parsed.reason.slice(0, 80) : 'no output',
+    /same operation|again/i.test(context) && /generate_image/.test(context),
+    context.slice(0, 80),
   );
 }
 
