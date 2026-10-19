@@ -92,12 +92,19 @@ function toolError(error) {
 /**
  * Build the wire params for an action: session scoping, the session tab group,
  * and the background/foreground translation the companion expects.
+ *
+ * `join` says whether the action may pull the *target* tab into the session
+ * group. `page.waitFor` still needs the group title — the extension uses it to
+ * put a newly created automation tab in the session's group — but it must not
+ * drag an explicitly targeted tab along with it.
  */
-function wireParams(action, args, session) {
+function wireParams(action, args, session, { join = true } = {}) {
   const params = { ...args };
   params.sessionKey = session.sessionKey;
 
-  // Tabs this session opens belong to this session's group.
+  // Tabs this session opens or groups belong to this session's group. Without
+  // this the extension falls back to the literal "Pi" — and `tab.group` then
+  // RENAMES the target tab's existing group (or the user's) to "Pi".
   if (action === 'tab.new' || action === 'tab.group') {
     params.groupTitle = session.groupTitle;
   }
@@ -105,7 +112,7 @@ function wireParams(action, args, session) {
   // see exactly which tabs the agent is working in.
   if (action.startsWith('page.') && !params.sessionGroupTitle) {
     params.sessionGroupTitle = session.groupTitle;
-    params.joinSessionGroup = true;
+    if (join) params.joinSessionGroup = true;
   }
   return params;
 }
@@ -234,7 +241,10 @@ const TOOL_DEFS = [
     },
     run: async (args, ctx) => {
       const { background, ...rest } = args;
-      const result = await ctx.send(`tab.${args.action}`, rest, { group: false });
+      // The session group title travels with every tab action: the extension
+      // falls back to "Pi" without it, and `tab.group` would then rename the
+      // target tab's group to "Pi".
+      const result = await ctx.send(`tab.${args.action}`, rest);
       return text(args.action === 'list' ? formatTabs(result) : safeJson(result));
     },
   },
@@ -815,11 +825,9 @@ export const TOOL_SCHEMAS = TOOL_DEFS.map(({ name, description, inputSchema }) =
  * @param {string} options.workspaceCwd
  */
 export function createTools({ bridge, session, extensionPath, workspaceCwd }) {
-  const send = async (action, args = {}, { timeoutMs = DEFAULT_TIMEOUT_MS, group = true } = {}) => {
+  const send = async (action, args = {}, { timeoutMs = DEFAULT_TIMEOUT_MS, join = true } = {}) => {
     assertAuthorized(action);
-    const params = group
-      ? wireParams(action, args, session)
-      : { ...args, sessionKey: session.sessionKey };
+    const params = wireParams(action, args, session, { join });
     return bridge.send(action, params, timeoutMs);
   };
 

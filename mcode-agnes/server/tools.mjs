@@ -193,12 +193,14 @@ const TOOL_DEFS = [
           type: 'string',
           description:
             'Where to write the image. A relative path resolves against the agent ' +
-            'workspace, but an absolute path (e.g. /home/you/project/hero.png) is ' +
-            'unambiguous and preferred.',
+            'workspace and has to stay inside it, but an absolute path ' +
+            '(e.g. /home/you/project/hero.png) is unambiguous and preferred.',
         },
         baseDir: {
           type: 'string',
-          description: 'Directory a relative savePath resolves against. Defaults to the agent workspace.',
+          description:
+            'Directory a relative path resolves against, inside the agent workspace. ' +
+            'Defaults to the agent workspace; it may not point outside it.',
         },
         maxRetries: { type: 'number', description: 'Override the retry count (default 15).' },
       },
@@ -299,6 +301,17 @@ const TOOL_DEFS = [
         const { endpoint, key } = credentialsFor(args.endpoint ?? 'agnes');
         const model = args.model ?? DEFAULT_VIDEO_MODEL;
 
+        // Resolved before the call, like the image path: a path that escapes
+        // the workspace is refused without starting a video task.
+        const target = args.savePath
+          ? resolveToolPath({
+              path: args.savePath,
+              baseDir: args.baseDir,
+              workspaceCwd,
+              label: 'savePath',
+            })
+          : null;
+
         const video = await requestVideo({
           baseUrl: endpoint.baseUrl,
           apiKey: key,
@@ -311,8 +324,7 @@ const TOOL_DEFS = [
         });
 
         const blocks = [];
-        if (args.savePath) {
-          const target = resolve(args.baseDir ?? workspaceCwd, args.savePath);
+        if (target) {
           await mkdir(dirname(target), { recursive: true });
           const response = await fetch(video.url);
           if (!response.ok) {
