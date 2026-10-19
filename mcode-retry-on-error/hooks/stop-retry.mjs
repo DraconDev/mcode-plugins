@@ -60,30 +60,11 @@ import {
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+import { isRetryableFailure, retryInstruction, textOf } from './transient.mjs';
+
 const HOOK_TIMEOUT_BUDGET_MS = 7_500;
 const TAIL_BYTES = 256 * 1024;
 const MAX_RECORDS = 60;
-
-/** Transient-failure signatures worth retrying. */
-const TRANSIENT_PATTERNS = [
-  /\b429\b/,
-  /\b5\d\d\b/,
-  /rate[\s_-]?limit/i,
-  /too many requests/i,
-  /quota/i,
-  /overloaded/i,
-  /capacity/i,
-  /temporarily unavailable/i,
-  /service unavailable/i,
-  /bad gateway/i,
-  /gateway timeout/i,
-  /timed? ?out/i,
-  /timeout/i,
-  /ECONNRESET|ECONNREFUSED|ETIMEDOUT|EPIPE/i,
-  /socket hang up/i,
-  /fetch failed/i,
-  /network error/i,
-];
 
 const log = (...args) => process.stderr.write(`[mcode-retry-on-error] ${args.join(' ')}\n`);
 
