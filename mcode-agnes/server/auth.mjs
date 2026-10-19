@@ -1,14 +1,18 @@
 /**
  * Credential resolution.
  *
- * The credentials live in pi's auth store (`~/.pi/agent/auth.json`), so pi and
- * mcode share one login. The environment is checked first, because that is the
- * usual way to override for a one-off.
+ * Two sources, in this order:
  *
- * pi's store shape:
- *   "agnes":       { "type": "api_key", "key": "..." }
- *   "openai-codex":{ "type": "oauth", "access": "...", "refresh": "...",
- *                    "expires": 1234, "accountId": "..." }
+ *   1. The environment — `AGNES_API_KEY` or `AGNES_CN_API_KEY`, depending on
+ *      the endpoint. This is the standalone path: it needs nothing but this
+ *      plugin, and it is how most people will supply a key.
+ *   2. pi's auth store (`~/.pi/agent/auth.json`), as a convenience for people
+ *      who already sign in to Agnes through pi — one login, two agents:
+ *
+ *        "agnes": { "type": "api_key", "key": "..." }
+ *
+ *      It is not a dependency: without pi, the environment variable alone is
+ *      enough.
  */
 
 import { readFileSync } from 'node:fs';

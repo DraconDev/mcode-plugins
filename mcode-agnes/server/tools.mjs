@@ -56,9 +56,10 @@ function credentialsFor(name) {
   const { key, source } = resolveApiKey(name, endpoint.apiKeyEnv);
   if (!key) {
     throw new Error(
-      `No Agnes API key found for ${endpoint.label}. Set ${endpoint.apiKeyEnv}, or sign in ` +
-        'to the Agnes provider in pi so the key lands in pi\'s auth store ' +
-        "(~/.pi/agent/auth.json), which this plugin reads.",
+      `No Agnes API key found for ${endpoint.label}. Set ${endpoint.apiKeyEnv} in the ` +
+        'environment — that is all this plugin needs. If you already sign in to Agnes ' +
+        'through pi, the key is read from pi\'s auth store (~/.pi/agent/auth.json) ' +
+        'automatically, and no environment variable is required.',
     );
   }
   return { endpoint, key, source };
