@@ -58,6 +58,9 @@ const LIMIT_CONTEXT = String.raw`\b(?:429|too\s+many\s+requests|exceeded|exhaust
  */
 const RATE_LIMIT_TRANSIENT = [
   /\brate[_\s-]?limit[_\s-]?(?:exceeded|exhausted|hit|reached|triggered)\b/i,
+  // "the provider is rate limiting requests" is a report of a limit in
+  // force; "with automatic retry on rate limits" is a description of one.
+  /\b(?:is|are|was|were|been|being)\s+rate[\s_-]?limit(?:ed|ing|s)?\b/i,
   new RegExp(`rate[\\s_-]?limit(?:ed|ing|s)?\\b[^\\n]{0,40}${LIMIT_CONTEXT}`, 'i'),
   new RegExp(`${LIMIT_CONTEXT}[^\\n]{0,40}rate[\\s_-]?limit(?:ed|ing|s)?\\b`, 'i'),
 ];
