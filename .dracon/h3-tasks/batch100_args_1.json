@@ -1,0 +1,64 @@
+{
+  "requests": [
+    {
+      "prompt": "A vast misty mountain valley at sunrise, layered blue ridges fading into pale golden haze, low cloud filling the valley floor, a thin river catching the first light, distant peaks catching pink alpenglow, epic serene landscape photography, ultra detailed, high dynamic range, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "11_misty_mountain_valley"
+    },
+    {
+      "prompt": "A towering sandstone canyon at golden hour, striated red rock walls glowing amber, a narrow sandy floor with wind-carved ripples, long dramatic shadows, a few visitors dwarfed at the base for scale, crisp desert light, cinematic wide landscape, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "12_desert_canyon_golden_hour"
+    },
+    {
+      "prompt": "Terraced rice fields stepping down a mountainside, flooded paddies mirroring a pink and gold dawn sky, thin irrigation channels glinting, distant misty mountains behind, a lone farmer in a conical hat on a ridge path, serene agrarian landscape photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "13_rice_terraces_mountains"
+    },
+    {
+      "prompt": "Vivid green and violet aurora borealis arcing over a deep fjord, still black water reflecting the ribbons of light, steep bare mountains on either side, tiny cluster of red cabins on the shore giving scale, astrophotography, ultra wide, ultra detailed, no text, no watermark",
+      "aspect_ratio": "21:9",
+      "resolution": "2K",
+      "output_file": "14_northern_lights_fjord"
+    },
+    {
+      "prompt": "A quiet country road winding through a forest in peak autumn, golden and crimson maple leaves carpeting the ground, dappled sunlight through the canopy, a wooden fence line along one side, wet fallen leaves, warm nostalgic mood, high detail landscape photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "15_autumn_forest_road"
+    },
+    {
+      "prompt": "A black volcanic sand beach with powerful white surf rolling in, jagged basalt sea stacks offshore, a green cliff edge in the distance, low heavy overcast light, fine mist blowing off the breakers, moody Icelandic coast photography, ultra detailed, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "16_volcanic_black_sand_coast"
+    },
+    {
+      "prompt": "Rows of blooming lavender stretching to the horizon, tall slender cypress trees punctuating the field, a pale stone farmhouse in the distance, golden late afternoon sun raking across the purple rows, a bee in sharp focus in the foreground, pastoral Provence photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "17_lavender_field_cypress"
+    },
+    {
+      "prompt": "Floating blue icebergs in a calm glacier lagoon, chunks of translucent ice glowing turquoise in the cold light, distant snow-covered mountains reflected in the glassy water, tiny ice fragments scattered on the surface, crisp polar landscape photography, ultra detailed, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "18_glacier_lagoon_icebergs"
+    },
+    {
+      "prompt": "A lone flat-topped acacia tree silhouetted on an open African savanna, a herd of giraffes crossing the plain in the distance, enormous orange and violet sunset sky with streaked clouds, dusty golden grass, warm backlit haze, wildlife landscape photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "19_savanna_acacia_sunset"
+    },
+    {
+      "prompt": "Aerial top-down view of dense dark pine forest veiled in low fog, a single pale road cutting a clean line through the canopy, treetops emerging from white mist like islands, muted cold palette, fine art aerial photography, ultra detailed, no text, no watermark",
+      "aspect_ratio": "9:16",
+      "resolution": "2K",
+      "output_file": "20_foggy_pine_forest_aerial"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "requests": [
+    {
+      "prompt": "A combine harvester cutting a golden wheat field at late afternoon, a thick cloud of chaff and dust billowing behind it, long parallel lines of harvested stubble in the foreground, low golden sun flare, warm expansive rural photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "21_wheat_field_harvester"
+    },
+    {
+      "prompt": "Pale limestone dolomite peaks rising beneath thick turbulent storm clouds, sharp sunbeams breaking through gaps in the sky, a green alpine meadow in the foreground, tiny wildflowers catching the light, dramatic weather landscape photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "22_dolomite_dramatic_clouds"
+    },
+    {
+      "prompt": "A mirror-thin sheet of water over a vast salt flat, mirroring a towering cumulus sky so perfectly that the horizon disappears, a thin white salt crust cracking in the foreground, distant mountains floating in the reflection, serene minimal landscape photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "23_salt_flats_reflection"
+    },
+    {
+      "prompt": "A dense bamboo grove in soft morning fog, tall green culms with golden light filtering through, a narrow packed-earth path curving into the mist, dappled shadow patterns, fresh dew on the leaves, tranquil Japanese nature photography, ultra detailed, no text, no watermark",
+      "aspect_ratio": "9:16",
+      "resolution": "2K",
+      "output_file": "24_bamboo_grove"
+    },
+    {
+      "prompt": "A slender white waterfall plunging into a turquoise pool inside a lush tropical canyon, moss-covered cliffs draped with ferns and vines, sunlight shafts cutting through the mist, saturated emerald and jade palette, nature photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "25_tropical_canyon_waterfall"
+    },
+    {
+      "prompt": "A frozen lake surface fractured into a web of pale blue cracks, trapped bubbles suspended in the clear ice, low winter sun raking across the frozen plain, distant snow-dusted pines on the horizon, cold delicate blue and white palette, fine art photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "26_frozen_lake_cracks"
+    },
+    {
+      "prompt": "Tall green sea cliffs plunging into deep blue water, waves exploding white at the base, seabirds wheeling, a grassy clifftop path above, dramatic overcast light with a bright break in the clouds, rugged coastal photography, ultra detailed, no text, no watermark",
+      "aspect_ratio": "3:4",
+      "resolution": "2K",
+      "output_file": "27_coastal_cliffs_green"
+    },
+    {
+      "prompt": "Terraced mineral hot springs with vivid orange, rust and turquoise microbial mats, steam drifting across the surface, a lone figure in a towel on the far rim for scale, soft overcast light, geothermal landscape photography, rich color, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "28_hot_spring_terrace"
+    },
+    {
+      "prompt": "Long parallel rows of vines on rolling hills, ripe purple grapes heavy on the plants, low golden sun flaring between the rows, a distant stone farmhouse and cypress avenue, warm late-harvest landscape photography, ultra detailed, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "29_vineyard_rows_sunset"
+    },
+    {
+      "prompt": "A vast dark storm front sweeping over open plains, a bright forked lightning bolt striking in the distance, rain curtains visible beneath the shelf cloud, golden crop fields in the foreground lit by a shaft of sun, extreme storm photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "30_storm_plains_lightning"
+    }
+  ]
+}

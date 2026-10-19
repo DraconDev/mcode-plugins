@@ -1,0 +1,64 @@
+{
+  "requests": [
+    {
+      "prompt": "A monumental brutalist concrete stairway spiraling upward, deep geometric shadows, weathered board-formed concrete texture, a single person in a red coat ascending for scale, overcast diffused light, architectural photography, strong geometry, no text, no watermark",
+      "aspect_ratio": "3:4",
+      "resolution": "2K",
+      "output_file": "31_brutalist_stairway"
+    },
+    {
+      "prompt": "A narrow Tokyo back alley at night lined with glowing vending machines, tangled overhead power cables, a bicycle leaning on a wet wall, glowing ramen shop sign, neon reflections in puddles, deep shadows and saturated colour, cyberpunk street photography, no readable text, no watermark",
+      "aspect_ratio": "9:16",
+      "resolution": "2K",
+      "output_file": "32_tokyo_alley_vending_machines"
+    },
+    {
+      "prompt": "A Moroccan riad courtyard with zellige tile fountain, intricate carved stucco, potted citrus trees, shafts of sunlight from an unseen roof, a calico cat asleep on the warm stone, rich terracotta and cobalt palette, architectural travel photography, no text, no watermark",
+      "aspect_ratio": "4:3",
+      "resolution": "2K",
+      "output_file": "33_moroccan_riad_courtyard"
+    },
+    {
+      "prompt": "A vast old library interior, two tiers of dark oak galleries and rolling ladders, thousands of leather-bound books, dust motes drifting in a shaft of window light, a green banker's lamp glowing on a reading table, warm sepia atmosphere, ultra detailed, no readable text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "34_old_library_interior"
+    },
+    {
+      "prompt": "A modernist glass house at dusk, steel-framed transparent walls glowing warm from within, a lone tree growing through the interior courtyard, reflecting pool in front mirroring the lit structure, crisp architectural photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "35_modernist_glass_house"
+    },
+    {
+      "prompt": "A vintage tiled subway station platform, cream and oxblood geometric wall tiles, arched vaulted ceiling, warm sodium lamps, a train pulling in with motion blur, empty platform with one bench, cinematic urban photography, rich detail, no readable text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "36_subway_station_tiled"
+    },
+    {
+      "prompt": "A narrow Venetian canal in heavy morning fog, gondolas half hidden, warm ochre palazzi fading into the mist, water rippling against old stone, a single lit window, romantic muted atmosphere, fine art travel photography, no text, no watermark",
+      "aspect_ratio": "9:16",
+      "resolution": "2K",
+      "output_file": "37_venetian_canal_fog"
+    },
+    {
+      "prompt": "A rooftop greenhouse above a city at sunrise, glass panes fogged with condensation, lush tomato plants and trailing vines on steel shelving, the city skyline blurred beyond the roof edge, warm golden light, inviting interior photography, no text, no watermark",
+      "aspect_ratio": "4:3",
+      "resolution": "2K",
+      "output_file": "38_rooftop_greenhouse"
+    },
+    {
+      "prompt": "The interior of a vast abandoned factory hall, rusted steel gantries and broken floor-to-ceiling windows, shafts of dusty light, weeds growing through cracked concrete, peeling paint, moody desaturated industrial photography, no text, no watermark",
+      "aspect_ratio": "16:9",
+      "resolution": "2K",
+      "output_file": "39_industrial_factory_interior"
+    },
+    {
+      "prompt": "The soaring interior of a gothic cathedral, clustered columns rising into vaulted arches, stained glass casting saturated coloured patches on the stone floor, a lone visitor in the distance, reverent volumetric light, architectural photography, no text, no watermark",
+      "aspect_ratio": "3:4",
+      "resolution": "2K",
+      "output_file": "40_gothic_cathedral_interior"
+    }
+  ]
+}
